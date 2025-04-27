@@ -1,0 +1,29 @@
+# Node.js dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+
+# Environment variables
+.env
+
+# Logs
+*.log
+
+# Operating system files
+.DS_Store
+Thumbs.db
+
+# IDE/Editor settings
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+
+# React Native
+.expo/
+*.expo/
