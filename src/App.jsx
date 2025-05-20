@@ -1,20 +1,22 @@
-import React from "react";
+import { BrowserRouter as Router, useRoutes } from 'react-router-dom';
+import routes from './routes/routes';
+import './styles/App.css';
+import { ThemeProvider } from '@mui/material/styles';
+import theme from './theme';
+import React from 'react';
 
-  function App() {
-    const animals = ["Lion", "Cow", "Snake", "Lizard"];
-    const animalsList = animals.map((animal) => <li key={animal}>{animal}</li>)
-  
-    return (
-      <div>
-        <h1>Animals: </h1>
-        <ul>
-          {animalsList}
-        </ul>
-      </div>
-    );
-  }
+function AppRoutes() {
+  const element = useRoutes(routes);
+  return element;
+}
+function App() {
+  return (
+    <ThemeProvider theme={theme}>
+      <Router>
+        <AppRoutes />
+      </Router>
+    </ThemeProvider>
+  );
+}
 
-  export default App;
-
-
- 
+export default App;
