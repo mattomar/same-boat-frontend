@@ -4,19 +4,26 @@ import { motion } from 'framer-motion'
 import Ship from '../assets/ship.png'
 import ThreeDButton from './startButton'
 import { useNavigate } from 'react-router-dom'
+import { startSession } from '../api/session'
 
 
 const HeroSection = () => {
   const [clicked, setClicked] = useState(false)
 const [startTransition, setStartTransition] = useState(false)
 const navigate = useNavigate()
-const handleClick = () => {
-  setClicked(true)
-  setStartTransition(true)
+
+const handleClick = async () => {
+  const result = await startSession();
+  if (!result) {
+    console.error("Failed to start session.");
+    return;
+  }
+  setClicked(true);
+  setStartTransition(true);
   setTimeout(() => {
-    navigate('/waiting-room')
-  }, 2400) // allow circle to fully expand first
-}
+    navigate('/waiting-room');
+  }, 2400);
+};
   return (
     <Box
       sx={{

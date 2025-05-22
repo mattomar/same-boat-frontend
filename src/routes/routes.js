@@ -1,5 +1,7 @@
 import HomePage from "../pages/home"
 import WaitingRoom from "../pages/waitingRoom";
+import ChatRoom from "../pages/chatRoom";
+import { SocketProvider } from '../context/SocketContext';
 import React from "react";
 
 const routes = [
@@ -9,9 +11,21 @@ const routes = [
   },
   {
     path: '/waiting-room',
-    element: <WaitingRoom />
-  }
-  // Add more routes here if needed
+    element: (
+      <SocketProvider>
+        <WaitingRoom />
+      </SocketProvider>
+    ),
+  },
+  {
+    path: '/chat/:room',
+    element: (
+      <SocketProvider>
+        <ChatRoom />
+      </SocketProvider>
+    ),
+  },
+
 ];
 
 export default routes;
