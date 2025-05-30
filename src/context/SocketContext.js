@@ -7,7 +7,7 @@ export const SocketProvider = ({ children }) => {
   const [socket, setSocket] = useState(null);
 
   useEffect(() => {
-    const newSocket = io("http://localhost:3000"); // your server URL
+    const newSocket = io("http://localhost:3079"); // your server URL
     setSocket(newSocket);
 
     return () => {

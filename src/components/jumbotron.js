@@ -4,8 +4,7 @@ import { motion } from 'framer-motion'
 import Ship from '../assets/ship.png'
 import ThreeDButton from './startButton'
 import { useNavigate } from 'react-router-dom'
-import { startSession } from '../api/session'
-
+import { startSession } from '../utils/api'
 
 const HeroSection = () => {
   const [clicked, setClicked] = useState(false)

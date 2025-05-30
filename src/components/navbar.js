@@ -1,6 +1,11 @@
 import React from 'react';
-import { Box, Link } from '@mui/material';
+import { Box } from '@mui/material';
+import { Link as RouterLink } from 'react-router-dom';
+import { Link } from '@mui/material';
 
+<Link component={RouterLink} to="/login" sx={neonStyle} color="white">
+  Login
+</Link>
 const neonStyle = {
   fontSize: '0.9rem',
   filter: `
@@ -29,28 +34,27 @@ function Navbar() {
       sx={{
         display: 'flex',
         justifyContent: 'flex-end',
-        backgroundColor: 'transparent', // Ensure no background color
+        backgroundColor: 'transparent',
         padding: '10px 0',
         width: '100%',
         boxSizing: 'border-box',
+        gap: '20px',
       }}
     >
-      <Link
-        href="/"
-        underline="none"
-        color="white"
-        sx={{ ...neonStyle, marginRight: '20px' }}
-      >
+
+      <Link component={RouterLink} to="/" underline="none" color="white" sx={neonStyle}>
         Home
       </Link>
-      <Link
-        href="/about"
-        underline="none"
-        color="white"
-        sx={neonStyle}
-      >
+
+      <Link component={RouterLink} to="/about" underline="none" color="white" sx={neonStyle}>
         About us
       </Link>
+
+      <Link component={RouterLink} to="/login" underline="none" color="white" sx={neonStyle}>
+        Login
+      </Link>
+
+
     </Box>
   );
 }

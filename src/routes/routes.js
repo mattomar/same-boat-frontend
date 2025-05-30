@@ -1,6 +1,8 @@
 import HomePage from "../pages/home"
 import WaitingRoom from "../pages/waitingRoom";
+import Login from "../pages/logIn"
 import ChatRoom from "../pages/chatRoom";
+import Signup from "../pages/signUp";
 import { SocketProvider } from '../context/SocketContext';
 import React from "react";
 
@@ -24,8 +26,16 @@ const routes = [
         <ChatRoom />
       </SocketProvider>
     ),
-  },
 
+  },
+  {
+    path: '/login',
+    element: <Login />,
+  },
+  {
+    path: '/signup',
+    element: <Signup />,
+  },
 ];
 
 export default routes;
