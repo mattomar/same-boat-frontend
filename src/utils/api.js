@@ -4,13 +4,19 @@ const API_URL = "http://localhost:3079"; // Replace with your backend URL
 
 // Sign up API
 export const signUp = async (formData) => {
-  try {
-    const response = await axios.post(`${API_URL}/api/auth/signup`, formData);
-    return response.data;
-  } catch (error) {
-    console.error("Signup error:", error);
-    throw error.response ? error.response.data : error.message;
-  }
+  const config = {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  };
+
+  const response = await axios.post(
+    "http://localhost:3079/api/auth/signup",
+    formData,
+    config
+  );
+
+  return response.data;
 };
 
 

@@ -1,11 +1,8 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Box } from '@mui/material';
-import { Link as RouterLink } from 'react-router-dom';
+import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import { Link } from '@mui/material';
 
-<Link component={RouterLink} to="/login" sx={neonStyle} color="white">
-  Login
-</Link>
 const neonStyle = {
   fontSize: '0.9rem',
   filter: `
@@ -29,6 +26,22 @@ const neonStyle = {
 };
 
 function Navbar() {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const navigate = useNavigate();
+
+  // Check login status on mount
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    setIsLoggedIn(!!token);
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('userId');
+    setIsLoggedIn(false);
+    navigate('/'); // redirect to home after logout
+  };
+
   return (
     <Box
       sx={{
@@ -41,20 +54,42 @@ function Navbar() {
         gap: '20px',
       }}
     >
-
       <Link component={RouterLink} to="/" underline="none" color="white" sx={neonStyle}>
         Home
       </Link>
 
       <Link component={RouterLink} to="/about" underline="none" color="white" sx={neonStyle}>
-        About us
+        Commuinity
       </Link>
 
-      <Link component={RouterLink} to="/login" underline="none" color="white" sx={neonStyle}>
-        Login
-      </Link>
+      {!isLoggedIn && (
+        <Link component={RouterLink} to="/login" underline="none" color="white" sx={neonStyle}>
+          Login
+        </Link>
+      )}
 
+      {isLoggedIn && (
+        <>
+          <Link
+            component={RouterLink}
+            to={`/profile/${localStorage.getItem('userId')}`}
+            underline="none"
+            color="white"
+            sx={neonStyle}
+          >
+            My Profile
+          </Link>
 
+          <Link
+            underline="none"
+            color="white"
+            sx={{ ...neonStyle, cursor: 'pointer' }}
+            onClick={handleLogout}
+          >
+            Logout
+          </Link>
+        </>
+      )}
     </Box>
   );
 }

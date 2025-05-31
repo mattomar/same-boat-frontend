@@ -22,7 +22,7 @@ const AuthForm = ({ type, onSubmit, disabled, error }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-
+  
     if (type === "signup") {
       const formData = new FormData();
       formData.append("firstName", firstName);
@@ -31,11 +31,14 @@ const AuthForm = ({ type, onSubmit, disabled, error }) => {
       formData.append("email", email);
       formData.append("password", password);
       formData.append("bio", bio);
-      if (avatarFile) formData.append("avatar", avatarFile);
-
+      formData.append("avatar", avatarFile);
       onSubmit(e, formData);
     } else {
-      onSubmit(e, { email, password });
+      const jsonData = {
+        email,
+        password,
+      };
+      onSubmit(e, jsonData);
     }
   };
 

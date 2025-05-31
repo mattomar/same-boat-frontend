@@ -1,31 +1,35 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { logIn } from "../utils/api";
 import AuthForm from "../components/authForm";
-import { Container, Typography, CircularProgress, Box } from "@mui/material";
+import { Container, Typography, CircularProgress, Box, Alert } from "@mui/material";
+import { jwtDecode } from "jwt-decode";
+import { logIn } from "../utils/api"; // your async function
 
 const Login = () => {
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   const handleLogin = async (e, formData) => {
     e.preventDefault();
-    setError("");
     setLoading(true);
+    setError(null);
 
     try {
-      const response = await logIn(formData);
-      localStorage.setItem("token", response.token);
-      // optional: set expiry if your backend sends it
-      // localStorage.setItem("tokenExpiry", response.expiry || "");
+      // Assuming formData is FormData, convert to plain object
+      const data = await logIn(formData);
 
-      // optional: dispatch a global event for auth change
-      window.dispatchEvent(new Event("storage"));
 
-      navigate("/folders"); // or whatever your protected route is
+      const decoded = jwtDecode(data.token);
+      const userId = decoded.userId;
+
+      localStorage.setItem("token", data.token);
+      localStorage.setItem("userId", userId);
+
+      navigate(`/profile/${userId}`);
     } catch (err) {
-      setError(err.response?.data?.message || "Login failed");
+      setError(typeof err === "string" ? err : err.message || "Login failed");
     } finally {
       setLoading(false);
     }
@@ -37,15 +41,23 @@ const Login = () => {
         <Typography variant="h4" align="center" gutterBottom>
           Welcome Back
         </Typography>
+
         <AuthForm
           type="login"
           onSubmit={handleLogin}
           disabled={loading}
           error={error}
         />
+
         {loading && (
           <Box display="flex" justifyContent="center" mt={2}>
             <CircularProgress />
+          </Box>
+        )}
+
+        {error && (
+          <Box mt={2}>
+            <Alert severity="error">{error}</Alert>
           </Box>
         )}
       </Box>

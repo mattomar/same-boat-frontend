@@ -3,6 +3,7 @@ import WaitingRoom from "../pages/waitingRoom";
 import Login from "../pages/logIn"
 import ChatRoom from "../pages/chatRoom";
 import Signup from "../pages/signUp";
+import Profile from "../pages/profile";
 import { SocketProvider } from '../context/SocketContext';
 import React from "react";
 
@@ -35,6 +36,10 @@ const routes = [
   {
     path: '/signup',
     element: <Signup />,
+  },
+  {
+    path: "/profile/:userId",
+    element: <Profile />,
   },
 ];
 
