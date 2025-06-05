@@ -58,7 +58,7 @@ function Navbar() {
         Home
       </Link>
 
-      <Link component={RouterLink} to="/about" underline="none" color="white" sx={neonStyle}>
+      <Link component={RouterLink} to="/community" underline="none" color="white" sx={neonStyle}>
         Commuinity
       </Link>
 

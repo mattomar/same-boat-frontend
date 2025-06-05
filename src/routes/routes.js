@@ -4,6 +4,7 @@ import Login from "../pages/logIn"
 import ChatRoom from "../pages/chatRoom";
 import Signup from "../pages/signUp";
 import Profile from "../pages/profile";
+import CategoryTabs from "../pages/community"
 import { SocketProvider } from '../context/SocketContext';
 import React from "react";
 
@@ -40,6 +41,10 @@ const routes = [
   {
     path: "/profile/:userId",
     element: <Profile />,
+  },
+  {
+    path: "/community",
+    element: <CategoryTabs />,
   },
 ];
 

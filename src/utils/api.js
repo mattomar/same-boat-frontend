@@ -60,3 +60,30 @@ export const startSession = async () => {
       return null;
     }
   };
+
+  export const fetchCategories = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/posts/categories`);
+      return response.data;
+    } catch (error) {
+      console.error("Failed to fetch categories:", error);
+      throw error.response ? error.response.data : error.message;
+    }
+  };
+
+  export const createPostApi = async (formData) => {
+    try {
+      const token = localStorage.getItem("token");
+  
+      const response = await axios.post(`${API_URL}/posts/createPost`, formData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+  
+      return response.data;
+    } catch (error) {
+      console.error("Create post error:", error);
+      throw error.response ? error.response.data : error.message;
+    }
+  };

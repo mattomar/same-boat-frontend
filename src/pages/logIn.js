@@ -27,7 +27,7 @@ const Login = () => {
       localStorage.setItem("token", data.token);
       localStorage.setItem("userId", userId);
 
-      navigate(`/profile/${userId}`);
+      navigate(`/`);
     } catch (err) {
       setError(typeof err === "string" ? err : err.message || "Login failed");
     } finally {
