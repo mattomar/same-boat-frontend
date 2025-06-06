@@ -1,7 +1,7 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import axios from 'axios';
 
-const API_URL = 'http://localhost:3079'; // adjust if needed
+const API_URL = 'http://localhost:3079'; // Adjust if needed
 
 // Async thunk to fetch user profile by id
 export const fetchUserProfile = createAsyncThunk(
@@ -13,8 +13,13 @@ export const fetchUserProfile = createAsyncThunk(
           Authorization: `Bearer ${localStorage.getItem('token')}`,
         },
       });
+
+      console.log('User Profile Response:', response.data);  // Check if data is received
+
+      // Return the profile data
       return response.data;
     } catch (error) {
+      console.error('Error fetching user profile:', error.response || error);
       return thunkAPI.rejectWithValue(error.response.data || 'Error fetching profile');
     }
   }
@@ -23,13 +28,20 @@ export const fetchUserProfile = createAsyncThunk(
 const userSlice = createSlice({
   name: 'user',
   initialState: {
-    profile: null,
+    profiles: {},  // Store user profiles by ID
+    loggedInUser: null, // Store logged-in user data
     loading: false,
     error: null,
   },
   reducers: {
-    clearProfile(state) {
-      state.profile = null;
+    setLoggedInUser(state, action) {
+      state.loggedInUser = action.payload; // Store the user data when logged in
+    },
+    clearLoggedInUser(state) {
+      state.loggedInUser = null;
+    },
+    clearProfile(state, action) {
+      delete state.profiles[action.payload];
       state.error = null;
       state.loading = false;
     },
@@ -42,7 +54,11 @@ const userSlice = createSlice({
       })
       .addCase(fetchUserProfile.fulfilled, (state, action) => {
         state.loading = false;
-        state.profile = action.payload;
+        const { id, profile } = action.payload;
+
+        const plainUserProfile = JSON.parse(JSON.stringify(action.payload));
+
+        state.profiles[id] = plainUserProfile;
       })
       .addCase(fetchUserProfile.rejected, (state, action) => {
         state.loading = false;
@@ -51,5 +67,5 @@ const userSlice = createSlice({
   },
 });
 
-export const { clearProfile } = userSlice.actions;
+export const { setLoggedInUser, clearLoggedInUser, clearProfile } = userSlice.actions;
 export default userSlice.reducer;

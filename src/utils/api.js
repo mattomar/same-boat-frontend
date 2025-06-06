@@ -87,3 +87,8 @@ export const startSession = async () => {
       throw error.response ? error.response.data : error.message;
     }
   };
+
+  export const searchGifs = async (query) => {
+    const response = await axios.get(`${API_URL}/gifs/search?q=${query}`);
+    return response.data;
+  };
