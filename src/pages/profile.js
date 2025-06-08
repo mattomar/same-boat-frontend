@@ -51,41 +51,36 @@ const Profile = () => {
   }, []);
 
   // If profile is still loading or not found, show loading/error state
- if (loading)
-  return (
-    <>
-      <Header />
-      <Box display="flex" justifyContent="center" mt={8}>
-        <CircularProgress />
-      </Box>
-    </>
-  );
+  if (loading)
+    return (
+      <>
+        <Header />
+        <Box display="flex" justifyContent="center" mt={8}>
+          <CircularProgress />
+        </Box>
+      </>
+    );
 
-if (error)
-  return (
-    <>
-      <Header />
-      <Typography color="error" variant="h6" align="center" mt={4}>
-        {error}
-      </Typography>
-    </>
-  );
+  if (error)
+    return (
+      <>
+        <Header />
+        <Typography color="error" variant="h6" align="center" mt={4}>
+          {error}
+        </Typography>
+      </>
+    );
 
-// If profile is undefined after fetching, show fallback UI instead of throwing error
-if (!userProfile) {
-  return (
-    <>
-      <Header />
-      <Typography color="error" variant="h6" align="center" mt={4}>
-        Profile not found. Please try again later.
-      </Typography>
-    </>
-  );
-}
-
-  // If profile is undefined after fetching, throw an error
+  // If profile is undefined after fetching, show fallback UI instead of throwing error
   if (!userProfile) {
-    throw new Error(`Profile not found for userId: ${userId}`);
+    return (
+      <>
+        <Header />
+        <Typography color="error" variant="h6" align="center" mt={4}>
+          Profile not found. Please try again later.
+        </Typography>
+      </>
+    );
   }
 
   return (

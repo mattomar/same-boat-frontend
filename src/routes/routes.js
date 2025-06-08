@@ -5,6 +5,7 @@ import ChatRoom from "../pages/chatRoom";
 import Signup from "../pages/signUp";
 import Profile from "../pages/profile";
 import CategoryTabs from "../pages/community"
+import PostWithAllComments from "../pages/postWithAllComments";
 import { SocketProvider } from '../context/SocketContext';
 import React from "react";
 
@@ -46,6 +47,11 @@ const routes = [
     path: "/community",
     element: <CategoryTabs />,
   },
+  {
+    path: "/post/:postId/comments",
+    element: <PostWithAllComments />
+  }
+
 ];
 
 export default routes;

@@ -2,12 +2,12 @@ import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import { createPostApi } from "../utils/api";
 import axios from "axios";
 
-const BASE_URL = "http://localhost:3079"; // ← adjust if deploying
+const API_URL = 'http://localhost:3079'; // Adjust if needed
 
 export const fetchPostsByCategory = createAsyncThunk(
   "posts/fetchByCategory",
   async (categoryId) => {
-    const response = await axios.get(`${BASE_URL}/posts/category/${categoryId}`);
+    const response = await axios.get(`${API_URL}/posts/category/${categoryId}`);
     return response.data;
   }
 );

@@ -29,17 +29,10 @@ const userSlice = createSlice({
   name: 'user',
   initialState: {
     profiles: {},  // Store user profiles by ID
-    loggedInUser: null, // Store logged-in user data
     loading: false,
     error: null,
   },
   reducers: {
-    setLoggedInUser(state, action) {
-      state.loggedInUser = action.payload; // Store the user data when logged in
-    },
-    clearLoggedInUser(state) {
-      state.loggedInUser = null;
-    },
     clearProfile(state, action) {
       delete state.profiles[action.payload];
       state.error = null;
@@ -55,10 +48,14 @@ const userSlice = createSlice({
       .addCase(fetchUserProfile.fulfilled, (state, action) => {
         state.loading = false;
         const { id, profile } = action.payload;
-
+      
+        // Deep copy the entire payload (not just the profile) to avoid Proxy
         const plainUserProfile = JSON.parse(JSON.stringify(action.payload));
-
+      
+        // Store the plain object in the Redux state
         state.profiles[id] = plainUserProfile;
+      
+        console.log('Profile stored in Redux (plain object):', state.profiles);
       })
       .addCase(fetchUserProfile.rejected, (state, action) => {
         state.loading = false;
@@ -67,5 +64,5 @@ const userSlice = createSlice({
   },
 });
 
-export const { setLoggedInUser, clearLoggedInUser, clearProfile } = userSlice.actions;
+export const { clearProfile } = userSlice.actions;
 export default userSlice.reducer;
