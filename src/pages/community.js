@@ -17,17 +17,26 @@ const CategoryTabs = () => {
   const { items: categories, status: categoryStatus } = useSelector((state) => state.category);
   const { posts, loading, error } = useSelector((state) => state.posts);
 
-  const [selectedCategory, setSelectedCategory] = useState(null);
+  const [selectedCategory, setSelectedCategory] = useState("");
 
   useEffect(() => {
     dispatch(fetchCategories());
   }, [dispatch]);
 
-  useEffect(() => {
-    if (selectedCategory !== null) {
-      dispatch(fetchPostsByCategory(selectedCategory));
-    }
-  }, [selectedCategory, dispatch]);
+useEffect(() => {
+  if (categories.length > 0 && !selectedCategory) {
+    const defaultCategory =
+      categories.find((cat) => cat.name === "TV/MOVIES") || categories[0];
+
+    setSelectedCategory(defaultCategory.id);
+  }
+}, [categories, selectedCategory, dispatch]);
+
+useEffect(() => {
+  if (selectedCategory) {
+    dispatch(fetchPostsByCategory(selectedCategory));
+  }
+}, [selectedCategory, dispatch]);
 
   if (categoryStatus !== "succeeded") return <CircularProgress />;
 
@@ -38,16 +47,20 @@ const CategoryTabs = () => {
         {categories.map((category) => (
           <Button
             key={category.id}
-            variant={selectedCategory === category.id ? "contained" : "outlined"}
+            variant={
+              selectedCategory === category.id ? "contained" : "outlined"
+            }
             sx={{
               borderRadius: "16px",
               padding: "12px 24px",
               textTransform: "none",
-              backgroundColor: selectedCategory === category.id ? "#1976d2" : "white",
+              backgroundColor:
+                selectedCategory === category.id ? "#1976d2" : "white",
               color: selectedCategory === category.id ? "white" : "#1976d2",
               borderColor: "#1976d2",
               "&:hover": {
-                backgroundColor: selectedCategory === category.id ? "#1565c0" : "#f0f0f0",
+                backgroundColor:
+                  selectedCategory === category.id ? "#1565c0" : "#f0f0f0",
               },
             }}
             onClick={() => setSelectedCategory(category.id)}
@@ -62,16 +75,20 @@ const CategoryTabs = () => {
         <CircularProgress />
       ) : error ? (
         <Typography color="error">Error: {error}</Typography>
-      ) : posts.length > 0 ? (
-        <Grid container spacing={2}>
-          {posts.map((post) => (
-            <Grid item xs={12} sm={6} md={4} key={post.id}>
-              <PostCard post={post} />
-            </Grid>
-          ))}
-        </Grid>
+      ) : selectedCategory !== null ? (
+        posts.length > 0 ? (
+          <Grid container spacing={2}>
+            {posts.map((post) => (
+              <Grid item xs={12} sm={6} md={4} key={post.id}>
+                <PostCard post={post} />
+              </Grid>
+            ))}
+          </Grid>
+        ) : (
+          <Typography>No posts in this category.</Typography>
+        )
       ) : (
-        <Typography>No posts in this category.</Typography>
+        <Typography>Select a category.</Typography>
       )}
     </Box>
   );
