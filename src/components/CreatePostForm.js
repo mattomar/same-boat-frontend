@@ -69,6 +69,8 @@ const CreatePostForm = ({ categories }) => {
 
     try {
       const result = await dispatch(createPost(formData)).unwrap();
+        dispatch(fetchPostsByCategory(finalForm.categoryId));
+
       console.log("✅ Post created:", result);
 
       setForm({
