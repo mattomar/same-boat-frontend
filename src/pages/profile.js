@@ -15,6 +15,8 @@ import BioSection from "../components/profile/bioSection";
 import Header from "../components/header";
 import CreatePostForm from "../components/CreatePostForm";
 import { fetchCategories } from "../utils/api";
+import Grid from "@mui/material/Grid";
+import PostCard from "../components/postCard";
 
 const Profile = () => {
   const { userId } = useParams(); // Extract userId from URL
@@ -23,6 +25,7 @@ const Profile = () => {
   // Access user profile by userId from Redux store
   const userProfile = useSelector((state) => state.user.profiles[userId]);
   const { loading, error } = useSelector((state) => state.user);
+  const posts = userProfile?.posts || [];
 
   // Log the profile for debugging
   console.log("User Profile Data:", userProfile);  // Should contain profile data once fetched
@@ -99,7 +102,13 @@ const Profile = () => {
         }}
       >
         {/* Profile Header Section - Profile Picture, Name, Bio */}
-        <Box display="flex" flexDirection="column" alignItems="center" gap={3} mb={4}>
+        <Box
+          display="flex"
+          flexDirection="column"
+          alignItems="center"
+          gap={3}
+          mb={4}
+        >
           <AvatarDisplay
             avatarUrl={userProfile.profile?.avatarUrl || undefined} // Access safely
             alt={`${userProfile.firstName} ${userProfile.lastName}`}
@@ -111,28 +120,34 @@ const Profile = () => {
               username={userProfile.username}
               email={userProfile.email}
             />
-            <BioSection sx={{ color: "white" }} bio={userProfile.profile?.bio || 'No bio available'} />
+            <BioSection
+              sx={{ color: "white" }}
+              bio={userProfile.profile?.bio || "No bio available"}
+            />
           </Box>
         </Box>
 
         <Divider sx={{ borderColor: "#555", mb: 3 }} />
 
         {/* Create Post Form Section */}
-        <Box textAlign="center" mb={4}>
-          <Typography variant="h6" color="white" mb={2}>
-            Create a New Post
-          </Typography>
-          <CreatePostForm categories={categoryList} />
-        </Box>
-
-        {/* Posts Section */}
-        <Box mt={4} textAlign="center">
-          <Typography variant="h6" color="white" mb={2}>
+        <Box mt={4}>
+          <Typography variant="h6" color="white" mb={3} textAlign="center">
             Posts
           </Typography>
-          <Typography variant="body2" color="gray">
-            No posts yet — coming soon!
-          </Typography>
+
+          {posts.length > 0 ? (
+            <Grid container spacing={2}>
+              {posts.map((post) => (
+                <Grid item xs={12} sm={6} md={4} key={post.id}>
+                  <PostCard post={post} />
+                </Grid>
+              ))}
+            </Grid>
+          ) : (
+            <Typography variant="body2" color="gray" textAlign="center">
+              No posts yet.
+            </Typography>
+          )}
         </Box>
       </Container>
     </>
