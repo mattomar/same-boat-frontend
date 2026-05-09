@@ -36,6 +36,8 @@ const postSlice = createSlice({
       builder
         .addCase(fetchPostsByCategory.pending, (state) => {
           state.loading = true;
+          state.posts = [];
+
         })
         .addCase(fetchPostsByCategory.fulfilled, (state, action) => {
           state.loading = false;
@@ -45,9 +47,7 @@ const postSlice = createSlice({
           state.loading = false;
           state.error = action.error.message;
         })
-        .addCase(createPost.fulfilled, (state, action) => {
-          state.posts.unshift(action.payload); // adds new post to top
-        });
+
     },
   });
   
