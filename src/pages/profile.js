@@ -17,6 +17,7 @@ import CreatePostForm from "../components/CreatePostForm";
 import { fetchCategories } from "../utils/api";
 import Grid from "@mui/material/Grid";
 import PostCard from "../components/postCard";
+import FriendButton from "../components/friendButton";
 
 const Profile = () => {
   const { userId } = useParams(); // Extract userId from URL
@@ -31,6 +32,7 @@ const Profile = () => {
   console.log("User Profile Data:", userProfile);  // Should contain profile data once fetched
   
   const [categoryList, setCategoryList] = useState([]);
+  const currentUser = JSON.parse(localStorage.getItem("user"));
 
   // Fetch user profile if it's not available in Redux (initial render)
   useEffect(() => {
@@ -124,6 +126,12 @@ const Profile = () => {
               sx={{ color: "white" }}
               bio={userProfile.profile?.bio || "No bio available"}
             />
+
+            {currentUser?.id !== userProfile.id && (
+              <Box mt={2}>
+                <FriendButton userId={userProfile.id} />
+              </Box>
+            )}
           </Box>
         </Box>
 
