@@ -11,6 +11,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { createPost } from "../store/postSlice";
 import { PhotoCamera, Gif, YouTube } from "@mui/icons-material"; // Import YouTube Icon
 import GiphyPicker from "../components/giphyPicker"; // 🔁 Imported reusable component
+import { fetchPostsByCategory } from "../store/postSlice";
 
 const CreatePostForm = ({ categories }) => {
   const dispatch = useDispatch();
