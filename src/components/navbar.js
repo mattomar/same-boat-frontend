@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Box } from '@mui/material';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import { Link } from '@mui/material';
+import UserSearch from './userSearch';
 
 const neonStyle = {
   fontSize: '0.9rem',
@@ -28,6 +29,7 @@ const neonStyle = {
 function Navbar() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const navigate = useNavigate();
+  const [openSearch, setOpenSearch] = useState(false);
 
   // Check login status on mount
   useEffect(() => {
@@ -45,25 +47,43 @@ function Navbar() {
   return (
     <Box
       sx={{
-        display: 'flex',
-        justifyContent: 'flex-end',
-        backgroundColor: 'transparent',
-        padding: '10px 0',
-        width: '100%',
-        boxSizing: 'border-box',
-        gap: '20px',
+        display: "flex",
+        justifyContent: "flex-end",
+        backgroundColor: "transparent",
+        padding: "10px 0",
+        width: "100%",
+        boxSizing: "border-box",
+        gap: "20px",
       }}
     >
-      <Link component={RouterLink} to="/" underline="none" color="white" sx={neonStyle}>
+      <Link
+        component={RouterLink}
+        to="/"
+        underline="none"
+        color="white"
+        sx={neonStyle}
+      >
         Home
       </Link>
 
-      <Link component={RouterLink} to="/community" underline="none" color="white" sx={neonStyle}>
+      <Link
+        component={RouterLink}
+        to="/community"
+        underline="none"
+        color="white"
+        sx={neonStyle}
+      >
         Commuinity
       </Link>
 
       {!isLoggedIn && (
-        <Link component={RouterLink} to="/login" underline="none" color="white" sx={neonStyle}>
+        <Link
+          component={RouterLink}
+          to="/login"
+          underline="none"
+          color="white"
+          sx={neonStyle}
+        >
           Login
         </Link>
       )}
@@ -72,7 +92,7 @@ function Navbar() {
         <>
           <Link
             component={RouterLink}
-            to={`/profile/${localStorage.getItem('userId')}`}
+            to={`/profile/${localStorage.getItem("userId")}`}
             underline="none"
             color="white"
             sx={neonStyle}
@@ -83,12 +103,40 @@ function Navbar() {
           <Link
             underline="none"
             color="white"
-            sx={{ ...neonStyle, cursor: 'pointer' }}
+            sx={{ ...neonStyle, cursor: "pointer" }}
             onClick={handleLogout}
           >
             Logout
           </Link>
+
+          {isLoggedIn && (
+            <Link
+              underline="none"
+              color="white"
+              sx={{ ...neonStyle, cursor: "pointer" }}
+              onClick={() => setOpenSearch((prev) => !prev)}
+            >
+              Search
+            </Link>
+          )}
         </>
+      )}
+
+      {isLoggedIn && openSearch && (
+        <Box
+          sx={{
+            position: "absolute",
+            top: "60px",
+            right: "20px",
+            backgroundColor: "#111",
+            padding: 2,
+            borderRadius: 2,
+            width: 300,
+            zIndex: 999,
+          }}
+        >
+          <UserSearch onClose={() => setOpenSearch(false)} />
+        </Box>
       )}
     </Box>
   );
