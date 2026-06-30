@@ -1,9 +1,15 @@
-import { useState } from "react";
+import React, { useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import { sendFriendRequest } from "../utils/api";
-import React from "react";
+import { setFriendStatus } from "../store/friendSlice";
 
 const FriendButton = ({ userId }) => {
-  const [status, setStatus] = useState("none");
+  const dispatch = useDispatch();
+
+  const status = useSelector(
+    (state) => state.friends.relations[userId] || "none",
+  );
+
   const [loading, setLoading] = useState(false);
 
   const handleAddFriend = async () => {
@@ -12,20 +18,29 @@ const FriendButton = ({ userId }) => {
 
       await sendFriendRequest(userId);
 
-      setStatus("pending");
-    } catch (error) {
-      console.log(error);
+      dispatch(
+        setFriendStatus({
+          userId,
+          status: "pending_sent",
+        }),
+      );
+    } catch (err) {
+      console.log(err);
     } finally {
       setLoading(false);
     }
   };
 
-  if (status === "friends") {
-    return <button>Friends</button>;
+  if (status === "pending_sent") {
+    return <button disabled>Requested</button>;
   }
 
-  if (status === "pending") {
-    return <button disabled>Pending</button>;
+  if (status === "pending_received") {
+    return <button>Respond</button>;
+  }
+
+  if (status === "friends") {
+    return <button disabled>Friends</button>;
   }
 
   return (
