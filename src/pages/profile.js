@@ -22,6 +22,7 @@ import FriendButton from "../components/friendButton";
 const Profile = () => {
   const { userId } = useParams(); // Extract userId from URL
   const dispatch = useDispatch();
+  const [friendStatus, setFriendStatus] = useState("none");
 
   // Access user profile by userId from Redux store
   const userProfile = useSelector((state) => state.user.profiles[userId]);
@@ -29,14 +30,15 @@ const Profile = () => {
   const posts = userProfile?.posts || [];
 
   // Log the profile for debugging
-  console.log("User Profile Data:", userProfile);  // Should contain profile data once fetched
-  
+  console.log("User Profile Data:", userProfile); // Should contain profile data once fetched
+
   const [categoryList, setCategoryList] = useState([]);
   const currentUser = JSON.parse(localStorage.getItem("user"));
 
   // Fetch user profile if it's not available in Redux (initial render)
   useEffect(() => {
-    if (userId && !userProfile) { // Prevent unnecessary fetch if profile exists
+    if (userId && !userProfile) {
+      // Prevent unnecessary fetch if profile exists
       console.log("Fetching profile for user:", userId);
       dispatch(fetchUserProfile(userId)); // Dispatch to fetch profile
     }
@@ -54,6 +56,26 @@ const Profile = () => {
 
     loadCategories();
   }, []);
+
+  useEffect(() => {
+    const loadStatus = async () => {
+      const token = localStorage.getItem("token");
+
+      const res = await fetch(
+        `http://localhost:3079/api/friends/status/${userProfile.id}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      const data = await res.json();
+      setFriendStatus(data.status);
+    };
+
+    if (userProfile?.id) loadStatus();
+  }, [userProfile?.id]);
 
   // If profile is still loading or not found, show loading/error state
   if (loading)
@@ -129,7 +151,10 @@ const Profile = () => {
 
             {currentUser?.id !== userProfile.id && (
               <Box mt={2}>
-                <FriendButton userId={userProfile.id} />
+                <FriendButton
+                  userId={userProfile.id}
+                  initialStatus={friendStatus}
+                />{" "}
               </Box>
             )}
           </Box>
