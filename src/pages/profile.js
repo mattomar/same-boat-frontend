@@ -140,6 +140,11 @@ const Profile = () => {
         {/* Create Post Form Section */}
         <Box mt={4}>
           <Typography variant="h6" color="white" mb={3} textAlign="center">
+            Create Post
+          </Typography>
+
+          <CreatePostForm categories={categoryList} />
+          <Typography variant="h6" color="white" mb={3} textAlign="center">
             Posts
           </Typography>
 
