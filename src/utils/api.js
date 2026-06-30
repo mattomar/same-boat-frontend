@@ -202,3 +202,33 @@ export const getFriends = async () => {
     throw error.response ? error.response.data : error.message;
   }
 };
+
+export const searchUsers = async (username) => {
+  try {
+    const token = localStorage.getItem("token");
+
+    const response = await axios.get(`${API_URL}/api/friends/search`, {
+      params: { username },
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    return response.data;
+  } catch (error) {
+    console.error("Search users error:", error);
+    throw error.response ? error.response.data : error.message;
+  }
+};
+
+export const getFriendStatus = async (userId) => {
+  const token = localStorage.getItem("token");
+
+  const res = await axios.get(`${API_URL}/api/friends/status/${userId}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  return res.data;
+};
