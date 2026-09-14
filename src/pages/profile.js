@@ -34,9 +34,9 @@ const [requestId, setRequestId] = useState(null);
   console.log("User Profile Data:", userProfile); // Should contain profile data once fetched
 
   const [categoryList, setCategoryList] = useState([]);
-  const currentUser = JSON.parse(localStorage.getItem("user"));
 
-  // Fetch user profile if it's not available in Redux (initial render)
+
+const currentUserId = localStorage.getItem("userId");  // Fetch user profile if it's not available in Redux (initial render)
   useEffect(() => {
     if (userId && !userProfile) {
       // Prevent unnecessary fetch if profile exists
@@ -158,7 +158,7 @@ const [requestId, setRequestId] = useState(null);
               bio={userProfile.profile?.bio || "No bio available"}
             />
 
-            {currentUser?.id !== userProfile.id && (
+            {Number(currentUserId) !== Number(userProfile.id) && (
               <Box mt={2}>
                 <FriendButton
                   userId={userProfile.id}
