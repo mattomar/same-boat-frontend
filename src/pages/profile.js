@@ -22,7 +22,8 @@ import FriendButton from "../components/friendButton";
 const Profile = () => {
   const { userId } = useParams(); // Extract userId from URL
   const dispatch = useDispatch();
-  const [friendStatus, setFriendStatus] = useState("none");
+const [friendStatus, setFriendStatus] = useState("none");
+const [requestId, setRequestId] = useState(null);
 
   // Access user profile by userId from Redux store
   const userProfile = useSelector((state) => state.user.profiles[userId]);
@@ -59,22 +60,30 @@ const Profile = () => {
 
   useEffect(() => {
     const loadStatus = async () => {
-      const token = localStorage.getItem("token");
+      try {
+        const token = localStorage.getItem("token");
 
-      const res = await fetch(
-        `http://localhost:3079/api/friends/status/${userProfile.id}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
+        const res = await fetch(
+          `http://localhost:3079/api/friends/status/${userProfile.id}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
           },
-        },
-      );
+        );
 
-      const data = await res.json();
-      setFriendStatus(data.status);
+        const data = await res.json();
+
+        setFriendStatus(data.status);
+        setRequestId(data.requestId);
+      } catch (err) {
+        console.error("Error loading friend status:", err);
+      }
     };
 
-    if (userProfile?.id) loadStatus();
+    if (userProfile?.id) {
+      loadStatus();
+    }
   }, [userProfile?.id]);
 
   // If profile is still loading or not found, show loading/error state
@@ -153,6 +162,7 @@ const Profile = () => {
               <Box mt={2}>
                 <FriendButton
                   userId={userProfile.id}
+                  requestId={requestId}
                   initialStatus={friendStatus}
                 />{" "}
               </Box>
