@@ -232,3 +232,15 @@ export const getFriendStatus = async (userId) => {
 
   return res.data;
 };
+
+export const getNotifications = async () => {
+  const token = localStorage.getItem("token");
+
+  const response = await axios.get(`${API_URL}/api/notifications`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  return response.data;
+};

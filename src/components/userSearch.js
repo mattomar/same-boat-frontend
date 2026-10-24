@@ -13,27 +13,32 @@ const UserSearch = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
-  const handleSearch = async (value) => {
-    setQuery(value);
+const handleSearch = async (value) => {
+  setQuery(value);
 
-    if (!value.trim()) {
-      setResults([]);
-      return;
-    }
+  if (!value.trim()) {
+    setResults([]);
+    return;
+  }
 
-    try {
-      const data = await searchUsers(value);
+  try {
+    console.log("Searching for:", value);
 
-      setResults(data);
+    const data = await searchUsers(value);
 
-      // 🔥 store ALL statuses in redux
-      const statuses = Object.fromEntries(data.map((u) => [u.id, u.status]));
+    console.log("SEARCH RESULTS:", data);
 
-      dispatch(setBulkStatuses(statuses));
-    } catch (err) {
-      console.error("Search error:", err);
-    }
-  };
+    setResults(data);
+
+    const statuses = Object.fromEntries(data.map((u) => [u.id, u.status]));
+
+    dispatch(setBulkStatuses(statuses));
+  } catch (err) {
+    console.error("Search error:", err);
+    console.log("Response:", err.response?.data);
+  }
+};
+console.log("Current results state:", results);
 
   return (
     <Box sx={{ width: "100%", maxWidth: 500, mx: "auto", mt: 4 }}>

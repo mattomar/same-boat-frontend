@@ -119,6 +119,10 @@ function Navbar() {
               Search
             </Link>
           )}
+
+          <Link component={RouterLink} to="/notifications" sx={neonStyle}>
+            Notifications
+          </Link>
         </>
       )}
 

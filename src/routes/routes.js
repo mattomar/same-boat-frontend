@@ -7,6 +7,7 @@ import Profile from "../pages/profile";
 import CategoryTabs from "../pages/community"
 import PostWithAllComments from "../pages/postWithAllComments";
 import { SocketProvider } from '../context/SocketContext';
+import Notifications from "../pages/notifcPage";
 import React from "react";
 
 const routes = [
@@ -50,7 +51,11 @@ const routes = [
   {
     path: "/post/:postId/comments",
     element: <PostWithAllComments />
-  }
+  },
+  {
+  path: "/notifications",
+  element: <Notifications />,
+}
 
 ];
 
