@@ -1,22 +1,24 @@
-import HomePage from "../pages/home"
+import HomePage from "../pages/home";
 import WaitingRoom from "../pages/waitingRoom";
-import Login from "../pages/logIn"
+import Login from "../pages/logIn";
 import ChatRoom from "../pages/chatRoom";
 import Signup from "../pages/signUp";
 import Profile from "../pages/profile";
-import CategoryTabs from "../pages/community"
+import CategoryTabs from "../pages/community";
 import PostWithAllComments from "../pages/postWithAllComments";
-import { SocketProvider } from '../context/SocketContext';
+import { SocketProvider } from "../context/SocketContext";
 import Notifications from "../pages/notifcPage";
+import Messages from "../pages/messages";
+import Conversation from "../pages/conversation";
 import React from "react";
 
 const routes = [
   {
-    path: '/',
+    path: "/",
     element: <HomePage />,
   },
   {
-    path: '/waiting-room',
+    path: "/waiting-room",
     element: (
       <SocketProvider>
         <WaitingRoom />
@@ -24,20 +26,19 @@ const routes = [
     ),
   },
   {
-    path: '/chat/:room',
+    path: "/chat/:room",
     element: (
       <SocketProvider>
         <ChatRoom />
       </SocketProvider>
     ),
-
   },
   {
-    path: '/login',
+    path: "/login",
     element: <Login />,
   },
   {
-    path: '/signup',
+    path: "/signup",
     element: <Signup />,
   },
   {
@@ -50,13 +51,20 @@ const routes = [
   },
   {
     path: "/post/:postId/comments",
-    element: <PostWithAllComments />
+    element: <PostWithAllComments />,
   },
   {
-  path: "/notifications",
-  element: <Notifications />,
-}
-
+    path: "/notifications",
+    element: <Notifications />,
+  },
+  {
+    path: "/messages",
+    element: <Messages />,
+  },
+  {
+    path: "/messages/:conversationId",
+    element: <Conversation />,
+  },
 ];
 
 export default routes;

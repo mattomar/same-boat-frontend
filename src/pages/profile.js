@@ -18,12 +18,13 @@ import { fetchCategories } from "../utils/api";
 import Grid from "@mui/material/Grid";
 import PostCard from "../components/postCard";
 import FriendButton from "../components/friendButton";
+import MessageButton from "../components/messageButton";
 
 const Profile = () => {
   const { userId } = useParams(); // Extract userId from URL
   const dispatch = useDispatch();
-const [friendStatus, setFriendStatus] = useState("none");
-const [requestId, setRequestId] = useState(null);
+  const [friendStatus, setFriendStatus] = useState("none");
+  const [requestId, setRequestId] = useState(null);
 
   // Access user profile by userId from Redux store
   const userProfile = useSelector((state) => state.user.profiles[userId]);
@@ -35,8 +36,9 @@ const [requestId, setRequestId] = useState(null);
 
   const [categoryList, setCategoryList] = useState([]);
 
+  const currentUserId = localStorage.getItem("userId");
 
-const currentUserId = localStorage.getItem("userId");  // Fetch user profile if it's not available in Redux (initial render)
+  // Fetch user profile if it's not available in Redux (initial render)
   useEffect(() => {
     if (userId && !userProfile) {
       // Prevent unnecessary fetch if profile exists
@@ -159,12 +161,20 @@ const currentUserId = localStorage.getItem("userId");  // Fetch user profile if 
             />
 
             {Number(currentUserId) !== Number(userProfile.id) && (
-              <Box mt={2}>
+              <Box
+                mt={2}
+                display="flex"
+                justifyContent="center"
+                alignItems="center"
+                gap={1}
+                flexWrap="wrap"
+              >
                 <FriendButton
                   userId={userProfile.id}
                   requestId={requestId}
                   initialStatus={friendStatus}
-                />{" "}
+                />
+                <MessageButton userId={userProfile.id} />
               </Box>
             )}
           </Box>

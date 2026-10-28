@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { Box } from '@mui/material';
-import { Link as RouterLink, useNavigate } from 'react-router-dom';
-import { Link } from '@mui/material';
-import UserSearch from './userSearch';
+import React, { useState, useEffect } from "react";
+import { Box } from "@mui/material";
+import { Link as RouterLink, useNavigate } from "react-router-dom";
+import { Link } from "@mui/material";
+import UserSearch from "./userSearch";
+import { disconnectDmSocket } from "../utils/dmSocket";
 
 const neonStyle = {
-  fontSize: '0.9rem',
+  fontSize: "0.9rem",
   filter: `
     brightness(1.2) 
     contrast(1.1) 
@@ -13,9 +14,9 @@ const neonStyle = {
     drop-shadow(0 0 8px #ffffff)
     drop-shadow(0 0 16px #ffffff)
   `,
-  transition: 'transform 0.3s ease, filter 0.3s ease',
-  '&:hover': {
-    transform: 'scale(1.05)',
+  transition: "transform 0.3s ease, filter 0.3s ease",
+  "&:hover": {
+    transform: "scale(1.05)",
     filter: `
       brightness(1.4) 
       contrast(1.2) 
@@ -33,15 +34,16 @@ function Navbar() {
 
   // Check login status on mount
   useEffect(() => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem("token");
     setIsLoggedIn(!!token);
   }, []);
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('userId');
+    disconnectDmSocket();
+    localStorage.removeItem("token");
+    localStorage.removeItem("userId");
     setIsLoggedIn(false);
-    navigate('/'); // redirect to home after logout
+    navigate("/"); // redirect to home after logout
   };
 
   return (
@@ -122,6 +124,16 @@ function Navbar() {
 
           <Link component={RouterLink} to="/notifications" sx={neonStyle}>
             Notifications
+          </Link>
+
+          <Link
+            component={RouterLink}
+            to="/messages"
+            underline="none"
+            color="white"
+            sx={neonStyle}
+          >
+            Messages
           </Link>
         </>
       )}
