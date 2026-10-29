@@ -384,3 +384,17 @@ export const declineMessageRequest = async (requestId) => {
     return dmError(e);
   }
 };
+
+export const markConversationRead = async (conversationId) => {
+  try {
+    return (
+      await axios.post(
+        `${API_URL}/api/messages/conversations/${conversationId}/read`,
+        {},
+        dmAuth(),
+      )
+    ).data;
+  } catch (e) {
+    return dmError(e);
+  }
+};

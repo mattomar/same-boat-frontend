@@ -62,6 +62,10 @@ const Messages = () => {
         getOutgoingMessageRequests(),
       ]);
       setConversations(c);
+      console.log("CONVERSATIONS:", c); // ADD THIS LINE
+      console.log("LOAD FUNCTION RAN");
+      console.log("CONVERSATIONS:", c);
+
       setIncoming(i);
       setOutgoing(o);
       setError("");
@@ -70,7 +74,11 @@ const Messages = () => {
     } finally {
       setLoading(false);
     }
+    
   }, []);
+  const unreadTotal = conversations.filter(
+    (c) => (c.unreadCount || 0) > 0,
+  ).length;
 
   useEffect(() => {
     if (!localStorage.getItem("token")) {
@@ -128,10 +136,25 @@ const Messages = () => {
           variant="fullWidth"
           sx={{ borderBottom: "1px solid #555", mb: 2 }}
         >
-          <Tab label="Chats" />
           <Tab
             label={
-              <Badge color="error" badgeContent={incoming.length} sx={{ pr: incoming.length ? 2 : 0 }}>
+              <Badge
+                color="error"
+                badgeContent={unreadTotal}
+                max={99}
+                sx={{ pr: unreadTotal ? 2 : 0 }}
+              >
+                Chats
+              </Badge>
+            }
+          />{" "}
+          <Tab
+            label={
+              <Badge
+                color="error"
+                badgeContent={incoming.length}
+                sx={{ pr: incoming.length ? 2 : 0 }}
+              >
                 Requests
               </Badge>
             }
@@ -140,7 +163,15 @@ const Messages = () => {
         </Tabs>
 
         {error && (
-          <Alert severity="error" sx={{ mb: 2 }} action={<Button color="inherit" size="small" onClick={() => load()}>Retry</Button>}>
+          <Alert
+            severity="error"
+            sx={{ mb: 2 }}
+            action={
+              <Button color="inherit" size="small" onClick={() => load()}>
+                Retry
+              </Button>
+            }
+          >
             {error}
           </Alert>
         )}
@@ -153,7 +184,9 @@ const Messages = () => {
           <>
             {tab === 0 &&
               (conversations.length === 0 ? (
-                empty("No conversations yet. Visit a profile and tap Message to start one.")
+                empty(
+                  "No conversations yet. Visit a profile and tap Message to start one.",
+                )
               ) : (
                 <List>
                   {conversations.map((c) => {
@@ -162,19 +195,47 @@ const Messages = () => {
                       ? `${last.senderId === currentUserId ? "You: " : ""}${last.text}`
                       : "No messages yet";
                     return (
-                      <ListItemButton key={c.id} onClick={() => navigate(`/messages/${c.id}`)} sx={{ borderRadius: 2 }}>
+                      <ListItemButton
+                        key={c.id}
+                        onClick={() => navigate(`/messages/${c.id}`)}
+                        sx={{ borderRadius: 2 }}
+                      >
                         <ListItemAvatar>
                           <Avatar src={c.otherUser?.avatarUrl || undefined}>
                             {displayName(c.otherUser)[0]}
                           </Avatar>
                         </ListItemAvatar>
+
                         <ListItemText
                           primary={displayName(c.otherUser)}
                           secondary={preview}
-                          primaryTypographyProps={{ color: "white" }}
-                          secondaryTypographyProps={{ color: "gray", noWrap: true }}
+                          primaryTypographyProps={{
+                            color: "white",
+                            fontWeight: c.unreadCount > 0 ? 700 : 400,
+                          }}
+                          secondaryTypographyProps={{
+                            color: c.unreadCount > 0 ? "white" : "gray",
+                            fontWeight: c.unreadCount > 0 ? 600 : 400,
+                            noWrap: true,
+                          }}
                         />
-                        <Typography variant="caption" sx={{ color: "gray", ml: 2 }}>
+                        {c.unreadCount > 0 && (
+                          <Box
+                            sx={{
+                              width: 9,
+                              height: 9,
+                              borderRadius: "50%",
+                              bgcolor: "#3797F0",
+                              flexShrink: 0,
+                              ml: 1,
+                            }}
+                          />
+                        )}
+
+                        <Typography
+                          variant="caption"
+                          sx={{ color: "gray", ml: 2 }}
+                        >
                           {formatTimestamp(last?.createdAt || c.lastMessageAt)}
                         </Typography>
                       </ListItemButton>
@@ -189,15 +250,24 @@ const Messages = () => {
               ) : (
                 <List>
                   {incoming.map((r) => (
-                    <ListItem key={r.id} alignItems="flex-start" sx={{ gap: 1, flexWrap: "wrap" }}>
+                    <ListItem
+                      key={r.id}
+                      alignItems="flex-start"
+                      sx={{ gap: 1, flexWrap: "wrap" }}
+                    >
                       <ListItemAvatar>
-                        <Avatar src={r.sender?.avatarUrl || undefined}>{displayName(r.sender)[0]}</Avatar>
+                        <Avatar src={r.sender?.avatarUrl || undefined}>
+                          {displayName(r.sender)[0]}
+                        </Avatar>
                       </ListItemAvatar>
                       <ListItemText
                         primary={`${displayName(r.sender)} (@${r.sender?.username})`}
                         secondary={r.initialMessage}
                         primaryTypographyProps={{ color: "white" }}
-                        secondaryTypographyProps={{ color: "gray", sx: { wordBreak: "break-word" } }}
+                        secondaryTypographyProps={{
+                          color: "gray",
+                          sx: { wordBreak: "break-word" },
+                        }}
                         sx={{ minWidth: 200, flex: 1 }}
                       />
                       <Box display="flex" gap={1}>
@@ -237,18 +307,27 @@ const Messages = () => {
                           size="small"
                           label={r.status}
                           color={statusColor[r.status] || "default"}
-                          onClick={r.status === "accepted" && r.conversationId ? () => navigate(`/messages/${r.conversationId}`) : undefined}
+                          onClick={
+                            r.status === "accepted" && r.conversationId
+                              ? () => navigate(`/messages/${r.conversationId}`)
+                              : undefined
+                          }
                         />
                       }
                     >
                       <ListItemAvatar>
-                        <Avatar src={r.receiver?.avatarUrl || undefined}>{displayName(r.receiver)[0]}</Avatar>
+                        <Avatar src={r.receiver?.avatarUrl || undefined}>
+                          {displayName(r.receiver)[0]}
+                        </Avatar>
                       </ListItemAvatar>
                       <ListItemText
                         primary={displayName(r.receiver)}
                         secondary={r.initialMessage}
                         primaryTypographyProps={{ color: "white" }}
-                        secondaryTypographyProps={{ color: "gray", noWrap: true }}
+                        secondaryTypographyProps={{
+                          color: "gray",
+                          noWrap: true,
+                        }}
                         sx={{ pr: 10 }}
                       />
                     </ListItem>

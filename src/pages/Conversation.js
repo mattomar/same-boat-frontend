@@ -12,7 +12,7 @@ import {
 } from "@mui/material";
 import Header from "../components/header";
 import useDmEvents from "../hooks/useDmEvents";
-import { getConversationMessages, sendDirectMessage } from "../utils/api";
+import { getConversationMessages, sendDirectMessage, markConversationRead } from "../utils/api";
 import { getDmSocket } from "../utils/dmSocket";
 import { MAX_MESSAGE_LENGTH, displayName, formatTimestamp } from "../utils/dmFormat";
 
@@ -59,6 +59,7 @@ const Conversation = () => {
       setOtherUser(data.conversation.otherUser);
       setMessages(data.messages);
       setHasMore(data.hasMore);
+      await markConversationRead(conversationId);
     } catch (err) {
       setError(err?.message || "Could not load this conversation.");
     } finally {
@@ -87,11 +88,19 @@ const Conversation = () => {
     };
   }, [convId]);
 
-  useDmEvents({
-    "dm:message": (msg) => {
-      if (msg.conversationId === convId) setMessages((prev) => addUnique(prev, msg));
-    },
-  });
+useDmEvents({
+  "dm:message": (msg) => {
+    if (Number(msg.conversationId) !== convId) return;
+
+    setMessages((prev) => addUnique(prev, msg));
+
+    if (Number(msg.senderId) !== currentUserId) {
+      markConversationRead(convId).catch((err) => {
+        console.error("Could not mark conversation as read:", err);
+      });
+    }
+  },
+});
 
   useEffect(() => {
     if (skipScroll.current) {
