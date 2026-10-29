@@ -5,6 +5,7 @@ import {
   sendFriendRequest,
   acceptFriendRequest,
   declineFriendRequest,
+  removeFriend,
 } from "../utils/api";
 import { setFriendStatus } from "../store/friendSlice";
 
@@ -31,6 +32,7 @@ const FriendButton = ({ userId, requestId, initialStatus }) => {
 
   const status = reduxStatus || initialStatus || "none";
   const [loading, setLoading] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
 
   const handleAddFriend = async () => {
     try {
@@ -44,7 +46,7 @@ const FriendButton = ({ userId, requestId, initialStatus }) => {
         }),
       );
     } catch (err) {
-      console.log(err);
+      console.error(err);
     } finally {
       setLoading(false);
     }
@@ -52,6 +54,7 @@ const FriendButton = ({ userId, requestId, initialStatus }) => {
 
   const handleAccept = async () => {
     try {
+      setLoading(true);
       await acceptFriendRequest(requestId);
 
       dispatch(
@@ -61,12 +64,15 @@ const FriendButton = ({ userId, requestId, initialStatus }) => {
         }),
       );
     } catch (err) {
-      console.log(err);
+      console.error(err);
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleDecline = async () => {
     try {
+      setLoading(true);
       await declineFriendRequest(requestId);
 
       dispatch(
@@ -76,7 +82,39 @@ const FriendButton = ({ userId, requestId, initialStatus }) => {
         }),
       );
     } catch (err) {
-      console.log(err);
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRemoveFriend = async () => {
+    const confirmed = window.confirm(
+      "Are you sure you want to remove this friend?",
+    );
+
+    if (!confirmed) return;
+
+    try {
+     
+setLoading(true);
+
+const result = await removeFriend(userId);
+console.log("REMOVE RESPONSE:", result);
+
+dispatch(
+  setFriendStatus({
+    userId,
+    status: "none",
+  }),
+);
+
+console.log("Friend removed from Redux:", userId);
+
+    } catch (err) {
+      console.error("Failed to remove friend:", err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -91,10 +129,20 @@ const FriendButton = ({ userId, requestId, initialStatus }) => {
   if (status === "pending_received") {
     return (
       <Box sx={{ display: "flex", gap: 1 }}>
-        <Button variant="outlined" onClick={handleAccept} sx={buttonSx}>
+        <Button
+          variant="outlined"
+          disabled={loading}
+          onClick={handleAccept}
+          sx={buttonSx}
+        >
           Accept
         </Button>
-        <Button variant="outlined" onClick={handleDecline} sx={buttonSx}>
+        <Button
+          variant="outlined"
+          disabled={loading}
+          onClick={handleDecline}
+          sx={buttonSx}
+        >
           Decline
         </Button>
       </Box>
@@ -103,8 +151,27 @@ const FriendButton = ({ userId, requestId, initialStatus }) => {
 
   if (status === "friends") {
     return (
-      <Button variant="outlined" disabled sx={buttonSx}>
-        Friends
+      <Button
+        variant="outlined"
+        disabled={loading}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+        onClick={handleRemoveFriend}
+        sx={{
+          ...buttonSx,
+          ...(isHovered && {
+            color: "#ff7777",
+            borderColor: "#ff7777",
+            backgroundColor: "rgba(255, 80, 80, 0.1)",
+            "&:hover": {
+              color: "#ff7777",
+              borderColor: "#ff7777",
+              backgroundColor: "rgba(255, 80, 80, 0.15)",
+            },
+          }),
+        }}
+      >
+        {loading ? "Removing..." : isHovered ? "Remove Friend" : "Friends"}
       </Button>
     );
   }

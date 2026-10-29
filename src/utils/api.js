@@ -398,3 +398,24 @@ export const markConversationRead = async (conversationId) => {
     return dmError(e);
   }
 };
+
+
+export const removeFriend = async (userId) => {
+  try {
+    const token = localStorage.getItem("token");
+
+    const response = await axios.delete(
+      `${API_URL}/api/friends/remove/${userId}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      },
+    );
+
+    return response.data;
+  } catch (error) {
+    console.error("Remove friend error:", error);
+    throw error.response ? error.response.data : error.message;
+  }
+};
