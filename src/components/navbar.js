@@ -1,15 +1,14 @@
 import React, { useState, useEffect } from "react";
-import { Box } from "@mui/material";
+import { Box, Link, ClickAwayListener } from "@mui/material";
 import { Link as RouterLink, useNavigate } from "react-router-dom";
-import { Link } from "@mui/material";
 import UserSearch from "./userSearch";
 import { disconnectDmSocket } from "../utils/dmSocket";
 
 const neonStyle = {
   fontSize: "0.9rem",
   filter: `
-    brightness(1.2) 
-    contrast(1.1) 
+    brightness(1.2)
+    contrast(1.1)
     drop-shadow(0 0 4px #ffffff)
     drop-shadow(0 0 8px #ffffff)
     drop-shadow(0 0 16px #ffffff)
@@ -18,8 +17,8 @@ const neonStyle = {
   "&:hover": {
     transform: "scale(1.05)",
     filter: `
-      brightness(1.4) 
-      contrast(1.2) 
+      brightness(1.4)
+      contrast(1.2)
       drop-shadow(0 0 6px #ffffff)
       drop-shadow(0 0 12px #ffffff)
       drop-shadow(0 0 24px #ffffff)
@@ -32,7 +31,6 @@ function Navbar() {
   const navigate = useNavigate();
   const [openSearch, setOpenSearch] = useState(false);
 
-  // Check login status on mount
   useEffect(() => {
     const token = localStorage.getItem("token");
     setIsLoggedIn(!!token);
@@ -43,7 +41,8 @@ function Navbar() {
     localStorage.removeItem("token");
     localStorage.removeItem("userId");
     setIsLoggedIn(false);
-    navigate("/"); // redirect to home after logout
+    setOpenSearch(false);
+    navigate("/");
   };
 
   return (
@@ -102,27 +101,79 @@ function Navbar() {
             My Profile
           </Link>
 
+          <ClickAwayListener onClickAway={() => setOpenSearch(false)}>
+            <Box sx={{ display: "contents" }}>
+              <Link
+                underline="none"
+                color="white"
+                sx={{ ...neonStyle, cursor: "pointer" }}
+                onClick={() => setOpenSearch((prev) => !prev)}
+              >
+                Search
+              </Link>
+
+              {openSearch && (
+                <Box
+                  sx={{
+                    position: "absolute",
+                    top: "60px",
+                    right: "20px",
+                    backgroundColor: "#151515",
+                    color: "#fff",
+                    padding: 2,
+                    border: "1px solid rgba(255,255,255,0.3)",
+                    borderRadius: 2,
+                    width: 300,
+                    zIndex: 999,
+                    boxShadow: "0 0 12px rgba(255,255,255,0.15)",
+                    "& input": {
+                      color: "#fff",
+                      backgroundColor: "#222",
+                    },
+                    "& input::placeholder": {
+                      color: "#aaa",
+                      opacity: 1,
+                    },
+                    "& label": {
+                      color: "#ccc",
+                    },
+                    "& .MuiOutlinedInput-root": {
+                      color: "#fff",
+                      backgroundColor: "#222",
+                      "& fieldset": {
+                        borderColor: "#666",
+                      },
+                      "&:hover fieldset": {
+                        borderColor: "#fff",
+                      },
+                      "&.Mui-focused fieldset": {
+                        borderColor: "#fff",
+                      },
+                    },
+                    "& .MuiTypography-root": {
+                      color: "#fff",
+                    },
+                    "& a": {
+                      color: "#fff",
+                    },
+                    "& button": {
+                      color: "#fff",
+                    },
+                  }}
+                >
+                  <UserSearch onClose={() => setOpenSearch(false)} />
+                </Box>
+              )}
+            </Box>
+          </ClickAwayListener>
+
           <Link
+            component={RouterLink}
+            to="/notifications"
             underline="none"
             color="white"
-            sx={{ ...neonStyle, cursor: "pointer" }}
-            onClick={handleLogout}
+            sx={neonStyle}
           >
-            Logout
-          </Link>
-
-          {isLoggedIn && (
-            <Link
-              underline="none"
-              color="white"
-              sx={{ ...neonStyle, cursor: "pointer" }}
-              onClick={() => setOpenSearch((prev) => !prev)}
-            >
-              Search
-            </Link>
-          )}
-
-          <Link component={RouterLink} to="/notifications" sx={neonStyle}>
             Notifications
           </Link>
 
@@ -135,24 +186,16 @@ function Navbar() {
           >
             Messages
           </Link>
-        </>
-      )}
 
-      {isLoggedIn && openSearch && (
-        <Box
-          sx={{
-            position: "absolute",
-            top: "60px",
-            right: "20px",
-            backgroundColor: "#111",
-            padding: 2,
-            borderRadius: 2,
-            width: 300,
-            zIndex: 999,
-          }}
-        >
-          <UserSearch onClose={() => setOpenSearch(false)} />
-        </Box>
+          <Link
+            underline="none"
+            color="white"
+            sx={{ ...neonStyle, cursor: "pointer" }}
+            onClick={handleLogout}
+          >
+            Logout
+          </Link>
+        </>
       )}
     </Box>
   );

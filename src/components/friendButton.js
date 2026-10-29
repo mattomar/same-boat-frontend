@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { Button, Box } from "@mui/material";
 import {
   sendFriendRequest,
   acceptFriendRequest,
@@ -7,19 +8,33 @@ import {
 } from "../utils/api";
 import { setFriendStatus } from "../store/friendSlice";
 
+const buttonSx = {
+  color: "white",
+  borderColor: "rgba(255, 255, 255, 0.7)",
+  borderRadius: "8px",
+  textTransform: "none",
+  transition: "all 0.3s ease",
+  "&:hover": {
+    borderColor: "white",
+    backgroundColor: "rgba(255, 255, 255, 0.08)",
+    boxShadow: "0 0 8px rgba(255, 255, 255, 0.25)",
+  },
+  "&.Mui-disabled": {
+    color: "rgba(255, 255, 255, 0.55)",
+    borderColor: "rgba(255, 255, 255, 0.25)",
+  },
+};
+
 const FriendButton = ({ userId, requestId, initialStatus }) => {
   const dispatch = useDispatch();
-
   const reduxStatus = useSelector((state) => state.friends.relations[userId]);
 
   const status = reduxStatus || initialStatus || "none";
-
   const [loading, setLoading] = useState(false);
 
   const handleAddFriend = async () => {
     try {
       setLoading(true);
-
       await sendFriendRequest(userId);
 
       dispatch(
@@ -66,26 +81,43 @@ const FriendButton = ({ userId, requestId, initialStatus }) => {
   };
 
   if (status === "pending_sent") {
-    return <button disabled>Requested</button>;
+    return (
+      <Button variant="outlined" disabled sx={buttonSx}>
+        Requested
+      </Button>
+    );
   }
 
   if (status === "pending_received") {
     return (
-      <>
-        <button onClick={handleAccept}>Accept</button>
-        <button onClick={handleDecline}>Decline</button>
-      </>
+      <Box sx={{ display: "flex", gap: 1 }}>
+        <Button variant="outlined" onClick={handleAccept} sx={buttonSx}>
+          Accept
+        </Button>
+        <Button variant="outlined" onClick={handleDecline} sx={buttonSx}>
+          Decline
+        </Button>
+      </Box>
     );
   }
 
   if (status === "friends") {
-    return <button disabled>Friends</button>;
+    return (
+      <Button variant="outlined" disabled sx={buttonSx}>
+        Friends
+      </Button>
+    );
   }
 
   return (
-    <button onClick={handleAddFriend} disabled={loading}>
+    <Button
+      variant="outlined"
+      disabled={loading}
+      onClick={handleAddFriend}
+      sx={buttonSx}
+    >
       {loading ? "Sending..." : "Add Friend"}
-    </button>
+    </Button>
   );
 };
 

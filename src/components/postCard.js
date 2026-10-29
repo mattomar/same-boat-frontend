@@ -1,33 +1,32 @@
 import React, { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchUserProfile } from "../store/userSlice";
-import { fetchComments } from "../store/commentSlice"; // Import the fetchComments action
+import { fetchComments } from "../store/commentSlice";
 import { Paper, Typography, Avatar, Box, Divider, Button } from "@mui/material";
 import { useNavigate } from "react-router-dom";
-import CommentInput from "../components/commentInput"; // Import the CommentInput
-import CommentList from "../components/commentList"; // Import the CommentList
+import CommentInput from "../components/commentInput";
+import CommentList from "../components/commentList";
 
 const PostCard = ({ post, showAllComments }) => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
-  // Get user profile by userId from post.user.id
   const userProfile = useSelector((state) => state.user.profiles[post.user.id]);
   const userLoading = useSelector((state) => state.user.loading);
 
-  // Fetch user profile if not found in the store
+  const comments = useSelector(
+    (state) => state.comments.commentsByPost[post.id],
+  );
+
   useEffect(() => {
     if (!userProfile) {
-      dispatch(fetchUserProfile(post.user.id)); // Fetch based on post.user.id
+      dispatch(fetchUserProfile(post.user.id));
     }
   }, [dispatch, post.user.id, userProfile]);
 
-  // Fetch comments for the post
-  const comments = useSelector((state) => state.comments.commentsByPost[post.id]);
-
   useEffect(() => {
     if (!comments) {
-      dispatch(fetchComments(post.id)); // Fetch comments if not already loaded
+      dispatch(fetchComments(post.id));
     }
   }, [dispatch, post.id, comments]);
 
@@ -35,94 +34,204 @@ const PostCard = ({ post, showAllComments }) => {
     navigate(`/profile/${post.user.id}`);
   };
 
-  // Check if avatar URL exists and is valid
-  const avatarUrl = userProfile?.profile?.avatarUrl?.trim();
-  const isAvatarValid = avatarUrl && avatarUrl !== 'null' && avatarUrl !== '';
-
-  // Handle navigation to a new page to show all comments
   const handleShowMore = () => {
     navigate(`/post/${post.id}/comments`);
   };
 
+  const avatarUrl = userProfile?.profile?.avatarUrl?.trim();
+  const isAvatarValid = avatarUrl && avatarUrl !== "null";
+
+  const visibleComments = comments
+    ? showAllComments
+      ? comments
+      : comments.slice(0, 2)
+    : [];
+
   return (
-    <Paper elevation={3} sx={{ p: 2, borderRadius: "16px" }}>
-      {/* User Info */}
+    <Paper
+      elevation={0}
+      sx={{
+        p: { xs: 2.5, sm: 3 },
+        borderRadius: "14px",
+        color: "#222222",
+        backgroundColor: "#ffffff",
+        border: "1px solid rgba(0,0,0,0.08)",
+        boxShadow: "0 2px 10px rgba(0,0,0,0.06)",
+        height: "100%",
+        boxSizing: "border-box",
+      }}
+    >
+      {/* Author */}
       {userLoading && !userProfile ? (
-        <Typography>Loading...</Typography>
+        <Typography variant="body2" sx={{ color: "#888888" }}>
+          Loading profile...
+        </Typography>
       ) : userProfile ? (
         <Box
-          display="flex"
-          alignItems="center"
-          mb={2} // Increased margin for better spacing
           onClick={handleUserClick}
-          sx={{ cursor: "pointer" }}
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            gap: 1.5,
+            mb: 2.5,
+            cursor: "pointer",
+            width: "fit-content",
+            "&:hover .author-name": {
+              color: "#008c9e",
+            },
+          }}
         >
           <Avatar
             src={isAvatarValid ? avatarUrl : undefined}
             alt={userProfile.username || "Unknown User"}
-            sx={{ mr: 1 }}
+            sx={{
+              width: 44,
+              height: 44,
+              fontSize: "1rem",
+              fontWeight: 600,
+              color: "#333333",
+              backgroundColor: "#eeeeee",
+            }}
           >
-            {!isAvatarValid && userProfile.username && userProfile.username.charAt(0).toUpperCase()}
+            {!isAvatarValid && userProfile.username?.charAt(0).toUpperCase()}
           </Avatar>
-          <Typography variant="subtitle2" fontWeight="bold">
+
+          <Typography
+            className="author-name"
+            variant="body1"
+            sx={{
+              color: "#222222",
+              fontSize: "1rem",
+              fontWeight: 700,
+              transition: "color 0.2s ease",
+            }}
+          >
             {userProfile.username || "Unknown User"}
           </Typography>
         </Box>
       ) : (
-        <Typography color="error">User not found</Typography>
+        <Typography variant="body2" sx={{ color: "#d32f2f" }}>
+          User not found
+        </Typography>
       )}
 
-      {/* Post Content */}
-      <Typography variant="h6" fontWeight="bold">{post.title}</Typography>
-      <Typography variant="body2" color="text.secondary" mb={2}>
-        {post.content}
-      </Typography>
+      {/* Main Post */}
+      <Box sx={{ mb: 3 }}>
+        <Typography
+          variant="h5"
+          sx={{
+            fontSize: { xs: "1.4rem", sm: "1.6rem" },
+            fontWeight: 700,
+            lineHeight: 1.4,
+            mb: 1.5,
+            color: "#1a1a1a",
+            overflowWrap: "anywhere",
+          }}
+        >
+          {post.title}
+        </Typography>
 
-      {/* Media */}
+        <Typography
+          variant="body1"
+          sx={{
+            fontSize: { xs: "1.05rem", sm: "1.1rem" },
+            lineHeight: 1.85,
+            color: "#333333",
+            whiteSpace: "pre-wrap",
+            overflowWrap: "anywhere",
+          }}
+        >
+          {post.content}
+        </Typography>
+      </Box>
+
+      {/* Post Image */}
       {post.photoUrl && (
-        <Box mb={2}>
-          <img
+        <Box sx={{ mb: 3 }}>
+          <Box
+            component="img"
             src={post.photoUrl}
             alt="Post media"
-            style={{
+            sx={{
+              display: "block",
               width: "100%",
-              borderRadius: "12px",
-              maxHeight: 300,
+              maxHeight: 360,
               objectFit: "cover",
+              borderRadius: "12px",
             }}
           />
         </Box>
       )}
 
-      {/* Divider to Separate Comments Section */}
-      <Divider sx={{ mb: 2 }} />
+      <Divider sx={{ borderColor: "#eeeeee", my: 2 }} />
 
-      {/* Comments Section */}
-      <Typography variant="h6" fontWeight="bold" mb={1}>Comments</Typography>
-
-      {/* Comment List */}
+      {/* Comments */}
       <Box
         sx={{
-          backgroundColor: "#f9f9f9", // Light background for comments
-          padding: "16px",
-          borderRadius: "8px",
-          boxShadow: "inset 0 0 10px rgba(0, 0, 0, 0.1)", // Slight shadow to separate visually
+          backgroundColor: "#f7f7f8",
+          borderRadius: "10px",
+          p: 1.5,
         }}
       >
-        <CommentList comments={comments ? (showAllComments ? comments : comments.slice(0, 2)) : []} />
+        <Typography
+          variant="subtitle2"
+          sx={{
+            color: "#777777",
+            fontWeight: 600,
+            fontSize: "0.75rem",
+            mb: 1,
+          }}
+        >
+          Comments {comments ? `(${comments.length})` : ""}
+        </Typography>
+
+        {visibleComments.length > 0 ? (
+          <Box sx={{ "& > *": { minWidth: 0 } }}>
+            <CommentList comments={visibleComments} />
+          </Box>
+        ) : (
+          <Typography
+            variant="body2"
+            sx={{
+              color: "#888888",
+              fontSize: "0.8rem",
+              py: 0.5,
+            }}
+          >
+            No comments yet.
+          </Typography>
+        )}
+
+        {!showAllComments && comments && comments.length > 2 && (
+          <Button
+            size="small"
+            onClick={handleShowMore}
+            sx={{
+              mt: 0.5,
+              px: 0,
+              minWidth: 0,
+              textTransform: "none",
+              color: "#555555",
+              fontSize: "0.78rem",
+              "&:hover": {
+                backgroundColor: "transparent",
+                color: "#008c9e",
+              },
+            }}
+          >
+            View all {comments.length} comments
+          </Button>
+        )}
       </Box>
 
-      {/* Show More Button */}
-      {!showAllComments && comments && comments.length > 2 && (
-        <Box mt={2} display="flex" justifyContent="center">
-          <Button variant="contained" color="primary" onClick={handleShowMore}>
-            Show More
-          </Button>
-        </Box>
-      )}
-
       {/* Comment Input */}
-      <Box mt={2}>
+      <Box
+        sx={{
+          mt: 1.5,
+          pt: 1.5,
+          borderTop: "1px solid #eeeeee",
+        }}
+      >
         <CommentInput postId={post.id} />
       </Box>
     </Paper>
