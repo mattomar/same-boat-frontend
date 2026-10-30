@@ -399,7 +399,6 @@ export const markConversationRead = async (conversationId) => {
   }
 };
 
-
 export const removeFriend = async (userId) => {
   try {
     const token = localStorage.getItem("token");
@@ -416,6 +415,26 @@ export const removeFriend = async (userId) => {
     return response.data;
   } catch (error) {
     console.error("Remove friend error:", error);
+    throw error.response ? error.response.data : error.message;
+  }
+};
+
+export const deleteDirectMessage = async (messageId) => {
+  try {
+    const token = localStorage.getItem("token");
+
+    const response = await axios.delete(
+      `${API_URL}/api/messages/message/${messageId}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      },
+    );
+
+    return response.data;
+  } catch (error) {
+    console.error("Delete message error:", error);
     throw error.response ? error.response.data : error.message;
   }
 };
