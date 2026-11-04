@@ -1,39 +1,26 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import {
-  Alert,
-  Avatar,
-  Box,
-  Button,
-  CircularProgress,
-  Container,
-  TextField,
-  Typography,
-  IconButton,
-  Menu,
-  MenuItem,
-} from "@mui/material";
-import MoreVertIcon from "@mui/icons-material/MoreVert";
+import { Alert, Box, Container } from "@mui/material";
 
 import Header from "../components/header";
+import ConversationHeader from "../components/messages/ConversationHeader";
+import MessageList from "../components/messages/MessageList";
+import MessageComposer from "../components/messages/MessageComposer";
+
 import useDmEvents from "../hooks/useDmEvents";
 import {
   getConversationMessages,
   sendDirectMessage,
   markConversationRead,
   deleteDirectMessage,
+  deleteConversation,
 } from "../utils/api";
+
 import { getDmSocket } from "../utils/dmSocket";
-import {
-  MAX_MESSAGE_LENGTH,
-  displayName,
-  formatTimestamp,
-} from "../utils/dmFormat";
+import { displayName } from "../utils/dmFormat";
 
 const addUnique = (list, msg) =>
-  list.some((m) => String(m.id) === String(msg.id))
-    ? list
-    : [...list, msg];
+  list.some((m) => String(m.id) === String(msg.id)) ? list : [...list, msg];
 
 const sendViaSocket = (socket, conversationId, text) =>
   new Promise((resolve, reject) => {
@@ -44,8 +31,14 @@ const sendViaSocket = (socket, conversationId, text) =>
 
     socket.emit("dm:send", { conversationId, text }, (res) => {
       clearTimeout(timer);
-      if (res && res.ok) resolve(res.message);
-      else reject({ message: (res && res.error) || "Could not send message." });
+
+      if (res && res.ok) {
+        resolve(res.message);
+      } else {
+        reject({
+          message: (res && res.error) || "Could not send message.",
+        });
+      }
     });
   });
 
@@ -58,26 +51,29 @@ const Conversation = () => {
   const [otherUser, setOtherUser] = useState(null);
   const [messages, setMessages] = useState([]);
   const [hasMore, setHasMore] = useState(false);
+
   const [loading, setLoading] = useState(true);
   const [loadingOlder, setLoadingOlder] = useState(false);
   const [error, setError] = useState("");
+
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState("");
-  const [deletingId, setDeletingId] = useState(null);
 
-  // Message menu
-  const [menuAnchor, setMenuAnchor] = useState(null);
-  const [selectedMessage, setSelectedMessage] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
+  const [deletingConversation, setDeletingConversation] = useState(false);
 
   const bottomRef = useRef(null);
   const skipScroll = useRef(false);
 
+  // Authentication
   useEffect(() => {
-    if (!localStorage.getItem("token")) navigate("/login");
+    if (!localStorage.getItem("token")) {
+      navigate("/login");
+    }
   }, [navigate]);
 
-  // Initial history
+  // Load conversation history
   const loadHistory = useCallback(async () => {
     setLoading(true);
     setError("");
@@ -104,10 +100,13 @@ const Conversation = () => {
     loadHistory();
   }, [loadHistory]);
 
-  // Join private room and rejoin after reconnects
+  // Join conversation socket room
   useEffect(() => {
     const socket = getDmSocket();
-    if (!socket || !Number.isInteger(convId)) return undefined;
+
+    if (!socket || !Number.isInteger(convId)) {
+      return undefined;
+    }
 
     const join = () =>
       socket.emit("dm:join", { conversationId: convId }, (res) => {
@@ -151,6 +150,7 @@ const Conversation = () => {
     },
   });
 
+  // Scroll to newest message
   useEffect(() => {
     if (skipScroll.current) {
       skipScroll.current = false;
@@ -215,8 +215,16 @@ const Conversation = () => {
     }
   };
 
-  // Delete message
-  const handleDelete = async (messageId) => {
+  // Enter sends, Shift + Enter creates a new line
+  const handleKeyDown = (event) => {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      handleSend();
+    }
+  };
+
+  // Delete individual message
+  const handleDeleteMessage = async (messageId) => {
     if (deletingId !== null) return;
 
     const confirmed = window.confirm("Delete this message?");
@@ -231,65 +239,39 @@ const Conversation = () => {
 
       setMessages((prev) =>
         prev.map((m) =>
-          String(m.id) === String(messageId)
-            ? { ...m, ...deletedMessage }
-            : m,
+          String(m.id) === String(messageId) ? { ...m, ...deletedMessage } : m,
         ),
       );
     } catch (err) {
-      setSendError(
-        err?.message || "Could not delete message.",
-      );
+      setSendError(err?.message || "Could not delete message.");
     } finally {
       setDeletingId(null);
     }
   };
 
-  // Open message menu
-  const handleMenuOpen = (event, messageId) => {
-    setMenuAnchor(event.currentTarget);
-    setSelectedMessage(messageId);
-  };
+  // Delete conversation for current user only
+  const handleDeleteConversation = async () => {
+    if (deletingConversation) return;
 
-  const handleMenuClose = () => {
-    setMenuAnchor(null);
-    setSelectedMessage(null);
-  };
+    const confirmed = window.confirm(
+      `Delete your conversation with ${
+        otherUser ? displayName(otherUser) : "this user"
+      }?`,
+    );
 
-  const handleMenuDelete = () => {
-    const messageId = selectedMessage;
-    handleMenuClose();
+    if (!confirmed) return;
 
-    if (messageId !== null) {
-      handleDelete(messageId);
+    setDeletingConversation(true);
+    setError("");
+
+    try {
+      await deleteConversation(convId);
+      navigate("/messages");
+    } catch (err) {
+      setError(err?.message || "Could not delete conversation.");
+      setDeletingConversation(false);
     }
   };
-
-  const onKeyDown = (e) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
-  };
-
-  const bubble = (mine) => ({
-    maxWidth: "75%",
-    px: 1.5,
-    py: 1,
-    borderRadius: 3,
-    color: "white",
-    wordBreak: "break-word",
-    whiteSpace: "pre-wrap",
-    background: mine
-      ? "rgba(0, 229, 255, 0.18)"
-      : "rgba(255, 255, 255, 0.08)",
-    border: mine
-      ? "1px solid rgba(0, 229, 255, 0.6)"
-      : "1px solid rgba(255, 255, 255, 0.15)",
-    boxShadow: mine
-      ? "0 0 8px rgba(0, 229, 255, 0.35)"
-      : "none",
-  });
 
   return (
     <>
@@ -310,44 +292,13 @@ const Conversation = () => {
           overflow: "hidden",
         }}
       >
-        {/* Header */}
-        <Box
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            gap: 1.5,
-            p: 2,
-            borderBottom: "1px solid #555",
-            color: "white",
-          }}
-        >
-          <Button
-            color="inherit"
-            size="small"
-            onClick={() => navigate("/messages")}
-            aria-label="Back to messages"
-          >
-            &larr; Back
-          </Button>
+        <ConversationHeader
+          otherUser={otherUser}
+          onBack={() => navigate("/messages")}
+          onDeleteConversation={handleDeleteConversation}
+          deletingConversation={deletingConversation}
+        />
 
-          <Avatar src={otherUser?.avatarUrl || undefined}>
-            {otherUser ? displayName(otherUser)[0] : ""}
-          </Avatar>
-
-          <Box>
-            <Typography variant="subtitle1" sx={{ lineHeight: 1.2 }}>
-              {otherUser ? displayName(otherUser) : "Conversation"}
-            </Typography>
-
-            {otherUser && (
-              <Typography variant="caption" sx={{ color: "gray" }}>
-                @{otherUser.username}
-              </Typography>
-            )}
-          </Box>
-        </Box>
-
-        {/* Messages */}
         <Box
           sx={{
             flex: 1,
@@ -358,206 +309,38 @@ const Conversation = () => {
             gap: 1,
           }}
         >
-          {loading ? (
-            <Box display="flex" justifyContent="center" py={6}>
-              <CircularProgress />
-            </Box>
-          ) : error ? (
-            <Box textAlign="center" py={4}>
-              <Alert severity="error" sx={{ mb: 2 }}>
-                {error}
-              </Alert>
-
-              <Button
-                variant="outlined"
-                color="inherit"
-                onClick={loadHistory}
-              >
-                Retry
-              </Button>
-            </Box>
-          ) : (
-            <>
-              {hasMore && (
-                <Button
-                  size="small"
-                  color="inherit"
-                  onClick={loadOlder}
-                  disabled={loadingOlder}
-                  sx={{ alignSelf: "center" }}
-                >
-                  {loadingOlder ? "Loading..." : "Load older messages"}
-                </Button>
-              )}
-
-              {messages.length === 0 && (
-                <Typography
-                  variant="body2"
-                  sx={{
-                    color: "gray",
-                    textAlign: "center",
-                    py: 4,
-                  }}
-                >
-                  No messages yet. Say hi!
-                </Typography>
-              )}
-
-              {messages.map((m) => {
-                const mine =
-                  Number(m.senderId) === currentUserId;
-                const deleted = Boolean(m.deletedAt);
-
-                return (
-                  <Box
-                    key={m.id}
-                    sx={{
-                      display: "flex",
-                      flexDirection: "column",
-                      alignItems: mine ? "flex-end" : "flex-start",
-                      width: "100%",
-                      "&:hover .message-menu-button": {
-                        opacity: 1,
-                      },
-                    }}
-                  >
-                    <Box
-                      sx={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 0.5,
-                        maxWidth: "100%",
-                        flexDirection: mine ? "row" : "row",
-                      }}
-                    >
-                      {mine && !deleted && (
-                        <IconButton
-                          className="message-menu-button"
-                          size="small"
-                          aria-label="Message options"
-                          onClick={(e) => handleMenuOpen(e, m.id)}
-                          sx={{
-                            color: "gray",
-                            opacity: { xs: 1, sm: 0 },
-                            transition: "opacity 0.2s",
-                            "&:hover": {
-                              color: "white",
-                              backgroundColor: "rgba(255,255,255,0.1)",
-                            },
-                          }}
-                        >
-                          <MoreVertIcon fontSize="small" />
-                        </IconButton>
-                      )}
-
-                      <Box
-                        sx={{
-                          ...bubble(mine),
-                          ...(deleted && {
-                            color: "gray",
-                            fontStyle: "italic",
-                            background: "rgba(255,255,255,0.04)",
-                            border: "1px solid rgba(255,255,255,0.1)",
-                            boxShadow: "none",
-                          }),
-                        }}
-                      >
-                        {deleted
-                          ? "This message was deleted."
-                          : m.text}
-                      </Box>
-                    </Box>
-
-                    <Typography
-                      variant="caption"
-                      sx={{
-                        color: "gray",
-                        mt: 0.25,
-                        mr: mine ? 0.5 : 0,
-                      }}
-                    >
-                      {formatTimestamp(m.createdAt)}
-                    </Typography>
-                  </Box>
-                );
-              })}
-
-              <div ref={bottomRef} />
-            </>
-          )}
+          <MessageList
+            messages={messages}
+            currentUserId={currentUserId}
+            loading={loading}
+            error={error}
+            onRetry={loadHistory}
+            hasMore={hasMore}
+            loadingOlder={loadingOlder}
+            onLoadOlder={loadOlder}
+            onDeleteMessage={handleDeleteMessage}
+            deletingId={deletingId}
+            bottomRef={bottomRef}
+          />
         </Box>
 
-        {/* Message options menu */}
-        <Menu
-          anchorEl={menuAnchor}
-          open={Boolean(menuAnchor)}
-          onClose={handleMenuClose}
-          anchorOrigin={{
-            vertical: "bottom",
-            horizontal: "left",
-          }}
-          transformOrigin={{
-            vertical: "top",
-            horizontal: "right",
-          }}
-        >
-          <MenuItem
-            onClick={handleMenuDelete}
-            disabled={deletingId !== null}
-            sx={{ color: "error.main" }}
-          >
-            Delete message
-          </MenuItem>
-        </Menu>
-
-        {/* Input */}
         {!error && (
-          <Box sx={{ p: 2, borderTop: "1px solid #555" }}>
-            {sendError && (
-              <Alert
-                severity="error"
-                onClose={() => setSendError("")}
-                sx={{ mb: 1 }}
-              >
-                {sendError}
-              </Alert>
-            )}
+          <MessageComposer
+            text={text}
+            onTextChange={setText}
+            onSend={handleSend}
+            onKeyDown={handleKeyDown}
+            sending={sending}
+            loading={loading}
+            sendError={sendError}
+            onClearError={() => setSendError("")}
+          />
+        )}
 
-            <Box
-              sx={{
-                display: "flex",
-                gap: 1,
-                alignItems: "flex-end",
-              }}
-            >
-              <TextField
-                fullWidth
-                multiline
-                maxRows={4}
-                size="small"
-                placeholder="Type a message"
-                value={text}
-                onChange={(e) => setText(e.target.value)}
-                onKeyDown={onKeyDown}
-                disabled={loading}
-                inputProps={{
-                  maxLength: MAX_MESSAGE_LENGTH,
-                }}
-                sx={{
-                  "& .MuiInputBase-root": { color: "white" },
-                  "& fieldset": { borderColor: "#666" },
-                }}
-              />
-
-              <Button
-                variant="contained"
-                onClick={handleSend}
-                disabled={loading || sending || !text.trim()}
-              >
-                Send
-              </Button>
-            </Box>
-          </Box>
+        {error && !loading && (
+          <Alert severity="error" sx={{ display: "none" }}>
+            {error}
+          </Alert>
         )}
       </Container>
     </>
@@ -565,4 +348,3 @@ const Conversation = () => {
 };
 
 export default Conversation;
-
