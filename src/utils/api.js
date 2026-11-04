@@ -437,4 +437,19 @@ export const deleteDirectMessage = async (messageId) => {
     console.error("Delete message error:", error);
     throw error.response ? error.response.data : error.message;
   }
+
+  
 };
+
+  export const deleteConversation = async (conversationId) => {
+    try {
+      return (
+        await axios.delete(
+          `${API_URL}/api/messages/conversations/${conversationId}`,
+          dmAuth(),
+        )
+      ).data;
+    } catch (e) {
+      return dmError(e);
+    }
+  };
