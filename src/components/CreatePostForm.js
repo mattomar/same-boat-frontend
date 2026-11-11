@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   TextField,
   Button,
@@ -7,26 +7,29 @@ import {
   IconButton,
   MenuItem,
 } from "@mui/material";
-import { useDispatch, useSelector } from "react-redux";
-import { createPost } from "../store/postSlice";
-import { PhotoCamera, Gif, YouTube } from "@mui/icons-material"; // Import YouTube Icon
-import GiphyPicker from "../components/giphyPicker"; // 🔁 Imported reusable component
-import { fetchPostsByCategory } from "../store/postSlice";
+import { useDispatch } from "react-redux";
+import {
+  createPost,
+  fetchPostsByCategory,
+  fetchPostsByUser,
+} from "../store/postSlice";
+import { PhotoCamera, Gif, YouTube } from "@mui/icons-material";
+import GiphyPicker from "../components/giphyPicker";
 
-const CreatePostForm = ({ categories }) => {
+const CreatePostForm = ({ categories, userId }) => {
   const dispatch = useDispatch();
-  const { status } = useSelector((state) => state.category);
 
   const [form, setForm] = useState({
     content: "",
     categoryId: "",
     photo: null,
     gifUrl: "",
-    youtubeUrl: "",  // Store YouTube URL
+    youtubeUrl: "",
   });
 
   const [gifModalOpen, setGifModalOpen] = useState(false);
-  const [youtubeUrlInput, setYoutubeUrlInput] = useState(""); // Manage the YouTube input state
+  const [youtubeUrlInput, setYoutubeUrlInput] = useState("");
+
   const [errors, setErrors] = useState({
     content: false,
     categoryId: false,
@@ -43,25 +46,24 @@ const CreatePostForm = ({ categories }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Validation for required fields
     const newErrors = {
       content: !form.content,
       categoryId: !form.categoryId,
     };
+
     setErrors(newErrors);
 
-    // If there's any validation error, stop the submission
     if (Object.values(newErrors).includes(true)) {
       return;
     }
 
     const formData = new FormData();
+
     const finalForm = {
       ...form,
       categoryId: form.categoryId ? Number(form.categoryId) : "",
     };
 
-    // Append photo, gifUrl, and youtubeUrl to formData
     for (let key in finalForm) {
       if (finalForm[key] !== null && finalForm[key] !== undefined) {
         formData.append(key, finalForm[key]);
@@ -70,7 +72,13 @@ const CreatePostForm = ({ categories }) => {
 
     try {
       const result = await dispatch(createPost(formData)).unwrap();
-        dispatch(fetchPostsByCategory(finalForm.categoryId));
+
+      // Refresh the correct posts list depending on where the form is used
+      if (userId) {
+        await dispatch(fetchPostsByUser(userId));
+      } else {
+        await dispatch(fetchPostsByCategory(finalForm.categoryId));
+      }
 
       console.log("✅ Post created:", result);
 
@@ -79,16 +87,17 @@ const CreatePostForm = ({ categories }) => {
         categoryId: "",
         photo: null,
         gifUrl: "",
-        youtubeUrl: "",  // Reset after submit
+        youtubeUrl: "",
       });
-      setYoutubeUrlInput("");  // Reset the YouTube URL input as well
+
+      setYoutubeUrlInput("");
     } catch (error) {
       console.error("❌ Failed to create post:", error);
     }
   };
 
   const handleYouTubeClick = () => {
-    setYoutubeUrlInput(""); // Reset input when YouTube button is clicked
+    setYoutubeUrlInput("");
   };
 
   const handleYoutubeUrlChange = (e) => {
@@ -97,7 +106,7 @@ const CreatePostForm = ({ categories }) => {
 
   const handleYoutubeUrlSubmit = () => {
     setForm({ ...form, youtubeUrl: youtubeUrlInput });
-    setYoutubeUrlInput(""); // Clear the input field after submission
+    setYoutubeUrlInput("");
   };
 
   return (
@@ -106,11 +115,11 @@ const CreatePostForm = ({ categories }) => {
       onSubmit={handleSubmit}
       p={2}
       borderRadius={3}
-      maxWidth="500px"  // Set a max width for the form
-      m="0 auto"  // Center the form
+      maxWidth="500px"
+      m="0 auto"
       display="flex"
       flexDirection="column"
-      gap={2} // Adding a small gap between elements
+      gap={2}
     >
       {/* Content Text Field */}
       <TextField
@@ -118,14 +127,14 @@ const CreatePostForm = ({ categories }) => {
         placeholder="What's on your mind?"
         name="content"
         multiline
-        rows={2}  // Shorter height
+        rows={2}
         value={form.content}
         onChange={handleChange}
         margin="dense"
         variant="filled"
-        size="small" // Make it smaller
+        size="small"
         required
-        error={errors.content} // Show error if content is empty
+        error={errors.content}
         helperText={errors.content ? "Content is required" : ""}
         InputProps={{
           style: {
@@ -147,12 +156,16 @@ const CreatePostForm = ({ categories }) => {
         onChange={handleChange}
         margin="dense"
         variant="filled"
-        size="small"  // Make it smaller
+        size="small"
         required
-        error={errors.categoryId} // Show error if category is not selected
+        error={errors.categoryId}
         helperText={errors.categoryId ? "Category is required" : ""}
         InputProps={{
-          style: { color: "white", backgroundColor: "#333", borderRadius: 8 },
+          style: {
+            color: "white",
+            backgroundColor: "#333",
+            borderRadius: 8,
+          },
         }}
         InputLabelProps={{ style: { color: "white" } }}
       >
@@ -163,8 +176,14 @@ const CreatePostForm = ({ categories }) => {
         ))}
       </TextField>
 
-      {/* Icon Buttons for photo, GIF, and YouTube */}
-      <Box mt={1} display="flex" gap={1} alignItems="center" justifyContent="space-between">
+      {/* Photo, GIF, and YouTube Buttons */}
+      <Box
+        mt={1}
+        display="flex"
+        gap={1}
+        alignItems="center"
+        justifyContent="space-between"
+      >
         <Box display="flex" gap={1} alignItems="center">
           <input
             accept="image/*"
@@ -174,6 +193,7 @@ const CreatePostForm = ({ categories }) => {
             name="photo"
             onChange={handleFileChange}
           />
+
           <label htmlFor="upload-photo">
             <IconButton component="span" size="small">
               <PhotoCamera sx={{ color: "white" }} />
@@ -184,7 +204,6 @@ const CreatePostForm = ({ categories }) => {
             <Gif sx={{ color: "white" }} />
           </IconButton>
 
-          {/* YouTube Icon Button */}
           <IconButton onClick={handleYouTubeClick} size="small">
             <YouTube sx={{ color: "white" }} />
           </IconButton>
@@ -195,15 +214,15 @@ const CreatePostForm = ({ categories }) => {
           type="submit"
           variant="contained"
           sx={{
-            borderRadius: "20px", // Slight rounding for the button
-            width: "120px", // Set a fixed width for consistency
+            borderRadius: "20px",
+            width: "120px",
             minWidth: "auto",
-            padding: "6px 16px", // Adjust padding to make it look neat
+            padding: "6px 16px",
             fontSize: "1rem",
-            backgroundColor: "#1976D2",  // Blue background color
-            color: "white",  // White text color
+            backgroundColor: "#1976D2",
+            color: "white",
             "&:hover": {
-              backgroundColor: "#1565C0",  // Darker blue on hover
+              backgroundColor: "#1565C0",
             },
           }}
         >
@@ -223,7 +242,7 @@ const CreatePostForm = ({ categories }) => {
         </Box>
       )}
 
-      {/* YouTube URL input styled inline */}
+      {/* YouTube URL Input */}
       {youtubeUrlInput && (
         <Box mt={1} display="flex" gap={1} alignItems="center">
           <TextField
@@ -244,6 +263,7 @@ const CreatePostForm = ({ categories }) => {
             }}
             InputLabelProps={{ style: { color: "white" } }}
           />
+
           <Button
             variant="contained"
             size="small"
@@ -263,7 +283,7 @@ const CreatePostForm = ({ categories }) => {
         </Box>
       )}
 
-      {/* Giphy Picker Modal */}
+      {/* Giphy Picker */}
       <GiphyPicker
         open={gifModalOpen}
         onClose={() => setGifModalOpen(false)}

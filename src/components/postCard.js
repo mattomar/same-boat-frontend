@@ -1,8 +1,24 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchUserProfile } from "../store/userSlice";
 import { fetchComments, deleteComment } from "../store/commentSlice";
-import { Paper, Typography, Avatar, Box, Divider, Button } from "@mui/material";
+import { deletePost } from "../store/postSlice";
+
+import {
+  Paper,
+  Typography,
+  Avatar,
+  Box,
+  Divider,
+  Button,
+  IconButton,
+  Menu,
+  MenuItem,
+} from "@mui/material";
+
+import MoreVertIcon from "@mui/icons-material/MoreVert";
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+
 import { useNavigate } from "react-router-dom";
 import CommentInput from "../components/commentInput";
 import CommentList from "../components/commentList";
@@ -11,7 +27,14 @@ const PostCard = ({ post, showAllComments }) => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
+  const currentUserId = localStorage.getItem("userId");
+
+  const [postMenuAnchor, setPostMenuAnchor] = useState(null);
+
+  const isPostOwner = String(currentUserId) === String(post.user.id);
+
   const userProfile = useSelector((state) => state.user.profiles[post.user.id]);
+
   const userLoading = useSelector((state) => state.user.loading);
 
   const comments = useSelector(
@@ -37,6 +60,8 @@ const PostCard = ({ post, showAllComments }) => {
   const handleShowMore = () => {
     navigate(`/post/${post.id}/comments`);
   };
+
+  // Delete a comment
   const handleDeleteComment = async (commentId) => {
     const confirmed = window.confirm(
       "Are you sure you want to delete this comment? Its replies will also be deleted.",
@@ -52,11 +77,33 @@ const PostCard = ({ post, showAllComments }) => {
         }),
       ).unwrap();
 
-      // Refresh comments because deleting a comment also deletes its replies
       await dispatch(fetchComments(post.id)).unwrap();
     } catch (error) {
       console.error("Failed to delete comment:", error);
       alert(error?.message || "Could not delete comment. Please try again.");
+    }
+  };
+
+  // Delete the post
+  const handleDeletePost = async () => {
+    setPostMenuAnchor(null);
+
+    const confirmed = window.confirm(
+      "Are you sure you want to delete this post? All its comments and replies will also be deleted.",
+    );
+
+    if (!confirmed) return;
+
+    try {
+      await dispatch(deletePost(post.id)).unwrap();
+    } catch (error) {
+      console.error("Failed to delete post:", error);
+
+      alert(
+        typeof error === "string"
+          ? error
+          : error?.message || "Could not delete post. Please try again.",
+      );
     }
   };
 
@@ -90,46 +137,79 @@ const PostCard = ({ post, showAllComments }) => {
         </Typography>
       ) : userProfile ? (
         <Box
-          onClick={handleUserClick}
           sx={{
             display: "flex",
+            justifyContent: "space-between",
             alignItems: "center",
-            gap: 1.5,
             mb: 2.5,
-            cursor: "pointer",
-            width: "fit-content",
-            "&:hover .author-name": {
-              color: "#008c9e",
-            },
           }}
         >
-          <Avatar
-            src={isAvatarValid ? avatarUrl : undefined}
-            alt={userProfile.username || "Unknown User"}
+          <Box
+            onClick={handleUserClick}
             sx={{
-              width: 44,
-              height: 44,
-              fontSize: "1rem",
-              fontWeight: 600,
-              color: "#333333",
-              backgroundColor: "#eeeeee",
+              display: "flex",
+              alignItems: "center",
+              gap: 1.5,
+              cursor: "pointer",
+              width: "fit-content",
+              "&:hover .author-name": {
+                color: "#008c9e",
+              },
             }}
           >
-            {!isAvatarValid && userProfile.username?.charAt(0).toUpperCase()}
-          </Avatar>
+            <Avatar
+              src={isAvatarValid ? avatarUrl : undefined}
+              alt={userProfile.username || "Unknown User"}
+              sx={{
+                width: 44,
+                height: 44,
+                fontSize: "1rem",
+                fontWeight: 600,
+                color: "#333333",
+                backgroundColor: "#eeeeee",
+              }}
+            >
+              {!isAvatarValid && userProfile.username?.charAt(0).toUpperCase()}
+            </Avatar>
 
-          <Typography
-            className="author-name"
-            variant="body1"
-            sx={{
-              color: "#222222",
-              fontSize: "1rem",
-              fontWeight: 700,
-              transition: "color 0.2s ease",
-            }}
-          >
-            {userProfile.username || "Unknown User"}
-          </Typography>
+            <Typography
+              className="author-name"
+              variant="body1"
+              sx={{
+                color: "#222222",
+                fontSize: "1rem",
+                fontWeight: 700,
+                transition: "color 0.2s ease",
+              }}
+            >
+              {userProfile.username || "Unknown User"}
+            </Typography>
+          </Box>
+
+          {isPostOwner && (
+            <>
+              <IconButton
+                size="small"
+                onClick={(event) => setPostMenuAnchor(event.currentTarget)}
+              >
+                <MoreVertIcon />
+              </IconButton>
+
+              <Menu
+                anchorEl={postMenuAnchor}
+                open={Boolean(postMenuAnchor)}
+                onClose={() => setPostMenuAnchor(null)}
+              >
+                <MenuItem
+                  onClick={handleDeletePost}
+                  sx={{ color: "error.main" }}
+                >
+                  <DeleteOutlineIcon fontSize="small" sx={{ mr: 1 }} />
+                  Delete post
+                </MenuItem>
+              </Menu>
+            </>
+          )}
         </Box>
       ) : (
         <Typography variant="body2" sx={{ color: "#d32f2f" }}>
@@ -213,7 +293,7 @@ const PostCard = ({ post, showAllComments }) => {
               comments={visibleComments}
               postOwnerId={post.user.id}
               onDeleteComment={handleDeleteComment}
-            />{" "}
+            />
           </Box>
         ) : (
           <Typography

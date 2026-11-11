@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchUserProfile } from "../store/userSlice";
+import { fetchPostsByUser } from "../store/postSlice";
 import { useParams } from "react-router-dom";
 import {
   CircularProgress,
@@ -21,32 +22,42 @@ import FriendButton from "../components/friendButton";
 import MessageButton from "../components/messageButton";
 
 const Profile = () => {
-  const { userId } = useParams(); // Extract userId from URL
+  const { userId } = useParams();
   const dispatch = useDispatch();
+
   const [friendStatus, setFriendStatus] = useState("none");
   const [requestId, setRequestId] = useState(null);
-
-  // Access user profile by userId from Redux store
-  const userProfile = useSelector((state) => state.user.profiles[userId]);
-  const { loading, error } = useSelector((state) => state.user);
-  const posts = userProfile?.posts || [];
-
-  // Log the profile for debugging
-  console.log("User Profile Data:", userProfile); // Should contain profile data once fetched
-
   const [categoryList, setCategoryList] = useState([]);
 
   const currentUserId = localStorage.getItem("userId");
 
-  // Fetch user profile if it's not available in Redux (initial render)
+  // Profile data
+  const userProfile = useSelector((state) => state.user.profiles[userId]);
+
+  const { loading: profileLoading, error: profileError } = useSelector(
+    (state) => state.user,
+  );
+
+  // Posts now come from the shared posts Redux state
+  const posts = useSelector((state) => state.posts.posts);
+  const postsLoading = useSelector((state) => state.posts.loading);
+  const postsError = useSelector((state) => state.posts.error);
+
+  // Fetch profile information
   useEffect(() => {
     if (userId && !userProfile) {
-      // Prevent unnecessary fetch if profile exists
-      console.log("Fetching profile for user:", userId);
-      dispatch(fetchUserProfile(userId)); // Dispatch to fetch profile
+      dispatch(fetchUserProfile(userId));
     }
-  }, [dispatch, userId, userProfile]); // Fetch if userProfile is not present
+  }, [dispatch, userId, userProfile]);
 
+  // Fetch posts belonging to this profile
+  useEffect(() => {
+    if (userId) {
+      dispatch(fetchPostsByUser(userId));
+    }
+  }, [dispatch, userId]);
+
+  // Fetch categories
   useEffect(() => {
     const loadCategories = async () => {
       try {
@@ -60,6 +71,7 @@ const Profile = () => {
     loadCategories();
   }, []);
 
+  // Fetch friend status
   useEffect(() => {
     const loadStatus = async () => {
       try {
@@ -88,8 +100,8 @@ const Profile = () => {
     }
   }, [userProfile?.id]);
 
-  // If profile is still loading or not found, show loading/error state
-  if (loading)
+  // Profile loading
+  if (profileLoading || !userProfile) {
     return (
       <>
         <Header />
@@ -98,24 +110,14 @@ const Profile = () => {
         </Box>
       </>
     );
+  }
 
-  if (error)
+  if (profileError) {
     return (
       <>
         <Header />
         <Typography color="error" variant="h6" align="center" mt={4}>
-          {error}
-        </Typography>
-      </>
-    );
-
-  // If profile is undefined after fetching, show fallback UI instead of throwing error
-  if (!userProfile) {
-    return (
-      <>
-        <Header />
-        <Typography color="error" variant="h6" align="center" mt={4}>
-          Profile not found. Please try again later.
+          {profileError}
         </Typography>
       </>
     );
@@ -124,6 +126,7 @@ const Profile = () => {
   return (
     <>
       <Header />
+
       <Container
         maxWidth="md"
         sx={{
@@ -136,7 +139,7 @@ const Profile = () => {
           boxShadow: "0 4px 6px rgba(0, 0, 0, 0.2)",
         }}
       >
-        {/* Profile Header Section - Profile Picture, Name, Bio */}
+        {/* Profile Header */}
         <Box
           display="flex"
           flexDirection="column"
@@ -145,9 +148,10 @@ const Profile = () => {
           mb={4}
         >
           <AvatarDisplay
-            avatarUrl={userProfile.profile?.avatarUrl || undefined} // Access safely
+            avatarUrl={userProfile.profile?.avatarUrl || undefined}
             alt={`${userProfile.firstName} ${userProfile.lastName}`}
           />
+
           <Box textAlign="center" sx={{ color: "white" }}>
             <UserInfo
               firstName={userProfile.firstName}
@@ -155,6 +159,7 @@ const Profile = () => {
               username={userProfile.username}
               email={userProfile.email}
             />
+
             <BioSection
               sx={{ color: "white" }}
               bio={userProfile.profile?.bio || "No bio available"}
@@ -174,6 +179,7 @@ const Profile = () => {
                   requestId={requestId}
                   initialStatus={friendStatus}
                 />
+
                 <MessageButton userId={userProfile.id} />
               </Box>
             )}
@@ -182,18 +188,36 @@ const Profile = () => {
 
         <Divider sx={{ borderColor: "#555", mb: 3 }} />
 
-        {/* Create Post Form Section */}
+        {/* Posts Section */}
         <Box mt={4}>
-          <Typography variant="h6" color="white" mb={3} textAlign="center">
-            Create Post
-          </Typography>
+          {Number(currentUserId) === Number(userProfile.id) && (
+            <>
+              <Typography variant="h6" color="white" mb={3} textAlign="center">
+                Create Post
+              </Typography>
+              <CreatePostForm categories={categoryList} userId={userId} />{" "}
+            </>
+          )}
 
-          <CreatePostForm categories={categoryList} />
-          <Typography variant="h6" color="white" mb={3} textAlign="center">
+          <Typography
+            variant="h6"
+            color="white"
+            mb={3}
+            mt={3}
+            textAlign="center"
+          >
             Posts
           </Typography>
 
-          {posts.length > 0 ? (
+          {postsLoading ? (
+            <Box display="flex" justifyContent="center" mt={3}>
+              <CircularProgress />
+            </Box>
+          ) : postsError ? (
+            <Typography color="error" textAlign="center">
+              {postsError}
+            </Typography>
+          ) : posts.length > 0 ? (
             <Grid container spacing={2}>
               {posts.map((post) => (
                 <Grid item xs={12} sm={6} md={4} key={post.id}>
