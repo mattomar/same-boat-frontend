@@ -35,6 +35,22 @@ export const postComment = createAsyncThunk(
   }
 );
 
+// Delete a comment
+export const deleteComment = createAsyncThunk(
+  "comments/deleteComment",
+  async ({ commentId, postId }) => {
+    const token = localStorage.getItem("token");
+
+    await axios.delete(`${API_URL}/posts/comments/${commentId}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    return { commentId, postId };
+  }
+);
+
 const commentsSlice = createSlice({
   name: 'comments',
   initialState: {
@@ -66,8 +82,19 @@ const commentsSlice = createSlice({
         // Add the newly posted comment to the correct post
         state.commentsByPost[postId].push(action.payload);
         console.log('Updated comments after posting:', state.commentsByPost); // Log after adding the new comment
-      });
+      })
+      .addCase(deleteComment.fulfilled, (state, action) => {
+        const { commentId, postId } = action.payload;
+
+  if (state.commentsByPost[postId]) {
+    state.commentsByPost[postId] = state.commentsByPost[postId].filter(
+      (comment) => comment.id !== commentId
+    );
+  }
+});
   },
 });
+
+
 
 export default commentsSlice.reducer;

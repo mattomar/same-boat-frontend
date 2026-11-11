@@ -1,7 +1,7 @@
 import React, { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchUserProfile } from "../store/userSlice";
-import { fetchComments } from "../store/commentSlice";
+import { fetchComments, deleteComment } from "../store/commentSlice";
 import { Paper, Typography, Avatar, Box, Divider, Button } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import CommentInput from "../components/commentInput";
@@ -36,6 +36,28 @@ const PostCard = ({ post, showAllComments }) => {
 
   const handleShowMore = () => {
     navigate(`/post/${post.id}/comments`);
+  };
+  const handleDeleteComment = async (commentId) => {
+    const confirmed = window.confirm(
+      "Are you sure you want to delete this comment? Its replies will also be deleted.",
+    );
+
+    if (!confirmed) return;
+
+    try {
+      await dispatch(
+        deleteComment({
+          commentId,
+          postId: post.id,
+        }),
+      ).unwrap();
+
+      // Refresh comments because deleting a comment also deletes its replies
+      await dispatch(fetchComments(post.id)).unwrap();
+    } catch (error) {
+      console.error("Failed to delete comment:", error);
+      alert(error?.message || "Could not delete comment. Please try again.");
+    }
   };
 
   const avatarUrl = userProfile?.profile?.avatarUrl?.trim();
@@ -187,7 +209,11 @@ const PostCard = ({ post, showAllComments }) => {
 
         {visibleComments.length > 0 ? (
           <Box sx={{ "& > *": { minWidth: 0 } }}>
-            <CommentList comments={visibleComments} />
+            <CommentList
+              comments={visibleComments}
+              postOwnerId={post.user.id}
+              onDeleteComment={handleDeleteComment}
+            />{" "}
           </Box>
         ) : (
           <Typography
