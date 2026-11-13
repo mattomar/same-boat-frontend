@@ -269,16 +269,26 @@ useEffect(() => {
                         sx={{
                           color: "#c8c8e0",
                           wordBreak: "break-word",
-                          cursor: n.senderId ? "pointer" : "default",
-                          "&:hover": n.senderId
-                            ? {
-                                color: ACCENT,
-                                textDecoration: "underline",
-                              }
-                            : {},
+                          cursor:
+                            n.type === "mention" ||
+                            n.type === "comment" ||
+                            n.senderId
+                              ? "pointer"
+                              : "default",
+                          "&:hover": {
+                            color: ACCENT,
+                            textDecoration: "underline",
+                          },
                         }}
                         onClick={() => {
-                          if (n.senderId) {
+                          if (
+                            (n.type === "mention" || n.type === "comment") &&
+                            n.postId
+                          ) {
+                            navigate(`/post/${n.postId}/comments`, {
+                              state: { commentId: n.commentId },
+                            });
+                          } else if (n.senderId) {
                             navigate(`/profile/${n.senderId}`);
                           }
                         }}

@@ -16,7 +16,7 @@ import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchComments, postComment } from "../store/commentSlice";
 import { fetchUserProfile } from "../store/userSlice";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
 const CommentList = ({
   comments = [],
@@ -26,10 +26,12 @@ const CommentList = ({
 }) => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const userProfiles = useSelector((state) => state.user.profiles);
 
   const currentUserId = localStorage.getItem("userId");
+  const targetCommentId = location.state?.commentId;
 
   const [menuAnchor, setMenuAnchor] = useState(null);
   const [selectedComment, setSelectedComment] = useState(null);
@@ -39,7 +41,6 @@ const CommentList = ({
   const [submittingReply, setSubmittingReply] = useState(false);
   const [replyError, setReplyError] = useState("");
 
-  // Tracks which original comments have expanded replies.
   const [expandedReplies, setExpandedReplies] = useState({});
 
   // Flatten nested comments to fetch every author's profile.
@@ -59,6 +60,65 @@ const CommentList = ({
       }
     });
   }, [comments, userProfiles, dispatch]);
+
+  // Find the original comment containing the target and expand its replies.
+  useEffect(() => {
+    if (!targetCommentId || comments.length === 0) return;
+
+    const findRootComment = (commentList, root = null) => {
+      for (const comment of commentList) {
+        const currentRoot = root || comment;
+
+        if (String(comment.id) === String(targetCommentId)) {
+          return currentRoot;
+        }
+
+        const found = findRootComment(comment.replies || [], currentRoot);
+
+        if (found) return found;
+      }
+
+      return null;
+    };
+
+    const rootComment = findRootComment(comments);
+
+    if (rootComment) {
+      setExpandedReplies((prev) => ({
+        ...prev,
+        [rootComment.id]: true,
+      }));
+    }
+  }, [targetCommentId, comments]);
+
+  // Scroll to and highlight the selected comment after it renders.
+  useEffect(() => {
+    if (!targetCommentId || comments.length === 0) return;
+
+    const timer = setTimeout(() => {
+      const target = document.getElementById(`comment-${targetCommentId}`);
+
+      if (!target) return;
+
+      target.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+
+      target.style.backgroundColor = "rgba(0, 140, 158, 0.15)";
+      target.style.borderRadius = "8px";
+      target.style.transition = "background-color 0.5s ease";
+
+      const highlightTimer = setTimeout(() => {
+        target.style.backgroundColor = "transparent";
+      }, 2500);
+
+      // Store timer on the element for cleanup.
+      target.dataset.highlightTimer = highlightTimer;
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [targetCommentId, comments, expandedReplies]);
 
   // Get username from profile or included backend user data.
   const getUsername = (comment) => {
@@ -208,7 +268,6 @@ const CommentList = ({
       const mentionedUsername = part.slice(1);
       let mentionedUserId = null;
 
-      // Check whether this is the person being replied to.
       if (
         parentComment &&
         getUsername(parentComment).toLowerCase() ===
@@ -216,7 +275,6 @@ const CommentList = ({
       ) {
         mentionedUserId = parentComment.userId;
       } else {
-        // Otherwise check loaded user profiles.
         const matchingProfile = Object.entries(userProfiles).find(
           ([userId, profile]) =>
             profile?.username?.toLowerCase() ===
@@ -255,10 +313,12 @@ const CommentList = ({
 
     return (
       <Box
+        id={`comment-${comment.id}`}
         key={comment.id}
         sx={{
           mt: depth === 0 ? 0 : 1.5,
           ml: depth === 0 ? 0 : 2,
+          scrollMarginTop: "100px",
         }}
       >
         <Box display="flex" alignItems="flex-start" gap={1}>
@@ -408,7 +468,6 @@ const CommentList = ({
 
     const visibleReplies = isExpanded ? allReplies : allReplies.slice(0, 2);
 
-    // Map each reply to its actual parent.
     const parentMap = {};
 
     const buildParentMap = (comment) => {

@@ -28,6 +28,20 @@ export const fetchPostsByUser = createAsyncThunk(
   },
 );
 
+// Fetch a single post by ID
+export const fetchPostById = createAsyncThunk(
+  "posts/fetchPostById",
+  async (postId, { rejectWithValue }) => {
+    try {
+      const response = await axios.get(`${API_URL}/posts/${postId}`);
+      return response.data;
+    } catch (err) {
+      return rejectWithValue(
+        err.response?.data?.message || "Failed to fetch post"
+      );
+    }
+  }
+);
 // Create a post
 export const createPost = createAsyncThunk(
   "posts/createPost",
@@ -70,6 +84,8 @@ const postSlice = createSlice({
     posts: [],
     loading: false,
     error: null,
+    postLoading: false,
+    postError: null,
   },
 
   reducers: {},
@@ -104,6 +120,29 @@ const postSlice = createSlice({
       .addCase(fetchPostsByUser.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload || action.error.message;
+      })
+
+      // Fetch single post
+      .addCase(fetchPostById.pending, (state) => {
+        state.postLoading = true;
+        state.postError = null;
+      })
+      .addCase(fetchPostById.fulfilled, (state, action) => {
+        state.postLoading = false;
+
+        const existingIndex = state.posts.findIndex(
+          (post) => String(post.id) === String(action.payload.id),
+        );
+
+        if (existingIndex !== -1) {
+          state.posts[existingIndex] = action.payload;
+        } else {
+          state.posts.push(action.payload);
+        }
+      })
+      .addCase(fetchPostById.rejected, (state, action) => {
+        state.postLoading = false;
+        state.postError = action.payload || action.error.message;
       })
 
       // Delete post
