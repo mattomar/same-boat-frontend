@@ -416,19 +416,24 @@ export const declineMessageRequest = async (requestId) => {
   }
 };
 
+
 export const markConversationRead = async (conversationId) => {
   try {
-    return (
-      await axios.post(
-        `${API_URL}/api/messages/conversations/${conversationId}/read`,
-        {},
-        dmAuth(),
-      )
-    ).data;
+    const response = await axios.post(
+      `${API_URL}/api/messages/conversations/${conversationId}/read`,
+      {},
+      dmAuth(),
+    );
+
+    // Tell the Navbar to refresh its unread message badge
+    window.dispatchEvent(new Event("dm:unread-updated"));
+
+    return response.data;
   } catch (e) {
     return dmError(e);
   }
 };
+
 
 export const removeFriend = async (userId) => {
   try {
@@ -479,6 +484,42 @@ export const deleteDirectMessage = async (messageId) => {
           `${API_URL}/api/messages/conversations/${conversationId}`,
           dmAuth(),
         )
+      ).data;
+    } catch (e) {
+      return dmError(e);
+    }
+  };
+
+  export const blockUser = async (userId) => {
+    try {
+      return (await axios.post(`${API_URL}/api/blocks/${userId}`, {}, dmAuth()))
+        .data;
+    } catch (e) {
+      return dmError(e);
+    }
+  };
+
+  export const unblockUser = async (userId) => {
+    try {
+      return (await axios.delete(`${API_URL}/api/blocks/${userId}`, dmAuth()))
+        .data;
+    } catch (e) {
+      return dmError(e);
+    }
+  };
+
+  export const getBlockedUsers = async () => {
+    try {
+      return (await axios.get(`${API_URL}/api/blocks`, dmAuth())).data;
+    } catch (e) {
+      return dmError(e);
+    }
+  };
+
+  export const checkBlockStatus = async (userId) => {
+    try {
+      return (
+        await axios.get(`${API_URL}/api/blocks/check/${userId}`, dmAuth())
       ).data;
     } catch (e) {
       return dmError(e);

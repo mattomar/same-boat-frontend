@@ -47,11 +47,9 @@ const PostCard = ({ post, showAllComments }) => {
     }
   }, [dispatch, post.user.id, userProfile]);
 
-  useEffect(() => {
-    if (!comments) {
-      dispatch(fetchComments(post.id));
-    }
-  }, [dispatch, post.id, comments]);
+useEffect(() => {
+  dispatch(fetchComments(post.id));
+}, [dispatch, post.id]);
 
   const handleUserClick = () => {
     navigate(`/profile/${post.user.id}`);

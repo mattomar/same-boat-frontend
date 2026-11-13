@@ -10,6 +10,8 @@ import { SocketProvider } from "../context/SocketContext";
 import Notifications from "../pages/notifcPage";
 import Messages from "../pages/messages";
 import Conversation from "../pages/conversation";
+import BlockedUsers from "../pages/blockedUsers";
+import Settings from "../pages/seetings";
 import React from "react";
 
 const routes = [
@@ -64,6 +66,14 @@ const routes = [
   {
     path: "/messages/:conversationId",
     element: <Conversation />,
+  },
+  {
+    path: "/blocked-users",
+    element: <BlockedUsers />,
+  },
+  {
+    path: "/settings",
+    element: <Settings />,
   },
 ];
 

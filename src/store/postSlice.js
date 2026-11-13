@@ -4,12 +4,27 @@ import axios from "axios";
 
 const API_URL = "http://localhost:3079";
 
+const authConfig = () => ({
+  headers: {
+    Authorization: `Bearer ${localStorage.getItem("token")}`,
+  },
+});
+
 // Fetch posts by category
 export const fetchPostsByCategory = createAsyncThunk(
   "posts/fetchByCategory",
-  async (categoryId) => {
-    const response = await axios.get(`${API_URL}/posts/category/${categoryId}`);
-    return response.data;
+  async (categoryId, { rejectWithValue }) => {
+    try {
+      const response = await axios.get(
+        `${API_URL}/posts/category/${categoryId}`,
+        authConfig(),
+      );
+      return response.data;
+    } catch (err) {
+      return rejectWithValue(
+        err.response?.data?.message || "Failed to fetch category posts",
+      );
+    }
   },
 );
 
@@ -18,7 +33,10 @@ export const fetchPostsByUser = createAsyncThunk(
   "posts/fetchByUser",
   async (userId, { rejectWithValue }) => {
     try {
-      const response = await axios.get(`${API_URL}/posts/user/${userId}`);
+      const response = await axios.get(
+        `${API_URL}/posts/user/${userId}`,
+        authConfig(),
+      );
       return response.data;
     } catch (err) {
       return rejectWithValue(
@@ -33,15 +51,19 @@ export const fetchPostById = createAsyncThunk(
   "posts/fetchPostById",
   async (postId, { rejectWithValue }) => {
     try {
-      const response = await axios.get(`${API_URL}/posts/${postId}`);
+      const response = await axios.get(
+        `${API_URL}/posts/${postId}`,
+        authConfig(),
+      );
       return response.data;
     } catch (err) {
       return rejectWithValue(
-        err.response?.data?.message || "Failed to fetch post"
+        err.response?.data?.message || "Failed to fetch post",
       );
     }
-  }
+  },
 );
+
 // Create a post
 export const createPost = createAsyncThunk(
   "posts/createPost",
@@ -104,7 +126,7 @@ const postSlice = createSlice({
       })
       .addCase(fetchPostsByCategory.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.error.message;
+        state.error = action.payload || action.error.message;
       })
 
       // Fetch user posts

@@ -2,9 +2,9 @@ import React, { useState, useEffect } from "react";
 import { Box, Link, ClickAwayListener, Badge } from "@mui/material";
 import { Link as RouterLink, useNavigate, useLocation } from "react-router-dom";
 
-import UserSearch from "./userSearch";
+import UserSearch from "../components/userSearch";
 import { disconnectDmSocket } from "../utils/dmSocket";
-import { getUnreadNotificationCount } from "../utils/api";
+import { getUnreadNotificationCount, getConversations } from "../utils/api";
 
 const neonStyle = {
   fontSize: "0.9rem",
@@ -32,6 +32,7 @@ function Navbar() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [openSearch, setOpenSearch] = useState(false);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
+  const [unreadMessages, setUnreadMessages] = useState(0);
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -41,36 +42,75 @@ function Navbar() {
     setIsLoggedIn(!!token);
   }, []);
 
-  // Fetch unread notification count
+  // Fetch unread message count
   useEffect(() => {
     if (!isLoggedIn) {
-      setUnreadNotifications(0);
-      return;
-    }
-
-    // Hide the badge while viewing notifications
-    if (location.pathname === "/notifications") {
-      setUnreadNotifications(0);
+      setUnreadMessages(0);
       return;
     }
 
     let active = true;
 
-    const fetchUnreadCount = async () => {
+    const fetchUnreadMessages = async () => {
       try {
-        const count = await getUnreadNotificationCount();
+        const conversations = await getConversations();
+
+        const count = conversations.filter(
+          (c) => (c.unreadCount || 0) > 0,
+        ).length;
 
         if (active) {
-          setUnreadNotifications(count);
+          setUnreadMessages(count);
         }
       } catch (err) {
-        console.error("Failed to fetch unread notifications:", err);
+        console.error("Failed to fetch unread messages:", err);
       }
     };
 
-    fetchUnreadCount();
+    // Fetch immediately
+    fetchUnreadMessages();
 
-    const interval = setInterval(fetchUnreadCount, 15000);
+    // Refresh when a conversation is marked as read
+    window.addEventListener("dm:unread-updated", fetchUnreadMessages);
+
+    // Keep the periodic refresh as a backup
+    const interval = setInterval(fetchUnreadMessages, 15000);
+
+    return () => {
+      active = false;
+      window.removeEventListener("dm:unread-updated", fetchUnreadMessages);
+      clearInterval(interval);
+    };
+  }, [isLoggedIn, location.pathname]);
+
+  // Fetch unread message count
+  useEffect(() => {
+    if (!isLoggedIn) {
+      setUnreadMessages(0);
+      return;
+    }
+
+    let active = true;
+
+    const fetchUnreadMessages = async () => {
+      try {
+        const conversations = await getConversations();
+
+        const count = conversations.filter(
+          (c) => (c.unreadCount || 0) > 0,
+        ).length;
+
+        if (active) {
+          setUnreadMessages(count);
+        }
+      } catch (err) {
+        console.error("Failed to fetch unread messages:", err);
+      }
+    };
+
+    fetchUnreadMessages();
+
+    const interval = setInterval(fetchUnreadMessages, 15000);
 
     return () => {
       active = false;
@@ -84,6 +124,7 @@ function Navbar() {
     localStorage.removeItem("userId");
     setIsLoggedIn(false);
     setUnreadNotifications(0);
+    setUnreadMessages(0);
     setOpenSearch(false);
     navigate("/");
   };
@@ -242,7 +283,32 @@ function Navbar() {
             color="white"
             sx={neonStyle}
           >
-            Messages
+            <Badge
+              badgeContent={unreadMessages}
+              color="error"
+              max={99}
+              invisible={unreadMessages === 0}
+              sx={{
+                "& .MuiBadge-badge": {
+                  fontWeight: 700,
+                  fontSize: "0.7rem",
+                  minWidth: 18,
+                  height: 18,
+                },
+              }}
+            >
+              Messages
+            </Badge>
+          </Link>
+
+          <Link
+            component={RouterLink}
+            to="/settings"
+            underline="none"
+            color="white"
+            sx={neonStyle}
+          >
+            Settings
           </Link>
 
           <Link

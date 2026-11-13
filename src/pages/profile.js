@@ -3,6 +3,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { fetchUserProfile } from "../store/userSlice";
 import { fetchPostsByUser } from "../store/postSlice";
 import { useParams } from "react-router-dom";
+
 import {
   CircularProgress,
   Box,
@@ -10,26 +11,35 @@ import {
   Divider,
   Container,
 } from "@mui/material";
+
+import Grid from "@mui/material/Grid";
+
 import AvatarDisplay from "../components/profile/avatarDisplay";
 import UserInfo from "../components/profile/userInfo";
 import BioSection from "../components/profile/bioSection";
 import Header from "../components/header";
 import CreatePostForm from "../components/CreatePostForm";
-import { fetchCategories } from "../utils/api";
-import Grid from "@mui/material/Grid";
 import PostCard from "../components/postCard";
 import FriendButton from "../components/friendButton";
 import MessageButton from "../components/messageButton";
+import BlockButton from "../components/blockButton";
+
+import { fetchCategories, checkBlockStatus } from "../utils/api";
 
 const Profile = () => {
   const { userId } = useParams();
   const dispatch = useDispatch();
 
+  const currentUserId = localStorage.getItem("userId");
+  const isOwnProfile = Number(currentUserId) === Number(userId);
+
   const [friendStatus, setFriendStatus] = useState("none");
   const [requestId, setRequestId] = useState(null);
   const [categoryList, setCategoryList] = useState([]);
 
-  const currentUserId = localStorage.getItem("userId");
+  const [blockStatusLoading, setBlockStatusLoading] = useState(!isOwnProfile);
+  const [blockStatusError, setBlockStatusError] = useState(false);
+  const [isBlocked, setIsBlocked] = useState(false);
 
   // Profile data
   const userProfile = useSelector((state) => state.user.profiles[userId]);
@@ -38,24 +48,83 @@ const Profile = () => {
     (state) => state.user,
   );
 
-  // Posts now come from the shared posts Redux state
+  // Posts
   const posts = useSelector((state) => state.posts.posts);
   const postsLoading = useSelector((state) => state.posts.loading);
   const postsError = useSelector((state) => state.posts.error);
 
-  // Fetch profile information
+  // Check block relationship before fetching another user's profile
   useEffect(() => {
-    if (userId && !userProfile) {
+    let cancelled = false;
+
+    const loadBlockStatus = async () => {
+      if (isOwnProfile) {
+        setIsBlocked(false);
+        setBlockStatusError(false);
+        setBlockStatusLoading(false);
+        return;
+      }
+
+      try {
+        setBlockStatusLoading(true);
+        setBlockStatusError(false);
+        setIsBlocked(false);
+
+        const data = await checkBlockStatus(userId);
+
+        if (cancelled) return;
+
+        const blocked =
+          Boolean(data.blockedByMe) ||
+          Boolean(data.blockedMe) ||
+          Boolean(data.isBlocked);
+
+        setIsBlocked(blocked);
+      } catch (err) {
+        if (!cancelled) {
+          console.error("Error checking block status:", err);
+          setBlockStatusError(true);
+        }
+      } finally {
+        if (!cancelled) {
+          setBlockStatusLoading(false);
+        }
+      }
+    };
+
+    loadBlockStatus();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [userId, isOwnProfile]);
+
+  // Only fetch profile if the block check allows access
+  useEffect(() => {
+    if (
+      userId &&
+      !blockStatusLoading &&
+      !blockStatusError &&
+      !isBlocked &&
+      !userProfile
+    ) {
       dispatch(fetchUserProfile(userId));
     }
-  }, [dispatch, userId, userProfile]);
+  }, [
+    dispatch,
+    userId,
+    userProfile,
+    blockStatusLoading,
+    blockStatusError,
+    isBlocked,
+  ]);
 
-  // Fetch posts belonging to this profile
+  // Only fetch posts if the block check allows access
   useEffect(() => {
-    if (userId) {
+    if (userId && !blockStatusLoading && !blockStatusError && !isBlocked) {
       dispatch(fetchPostsByUser(userId));
     }
-  }, [dispatch, userId]);
+  }, [dispatch, userId, blockStatusLoading, blockStatusError, isBlocked]);
 
   // Fetch categories
   useEffect(() => {
@@ -86,6 +155,10 @@ const Profile = () => {
           },
         );
 
+        if (!res.ok) {
+          throw new Error("Could not fetch friend status");
+        }
+
         const data = await res.json();
 
         setFriendStatus(data.status);
@@ -95,10 +168,51 @@ const Profile = () => {
       }
     };
 
-    if (userProfile?.id) {
+    if (userProfile?.id && !isOwnProfile && !isBlocked && !blockStatusLoading) {
       loadStatus();
     }
-  }, [userProfile?.id]);
+  }, [userProfile?.id, isOwnProfile, isBlocked, blockStatusLoading]);
+
+  // Show loading while checking whether the profile is accessible
+  if (blockStatusLoading) {
+    return (
+      <>
+        <Header />
+        <Box display="flex" justifyContent="center" mt={8}>
+          <CircularProgress />
+        </Box>
+      </>
+    );
+  }
+
+  // If the block check fails, don't reveal the profile
+  if (blockStatusError) {
+    return (
+      <>
+        <Header />
+        <Typography color="error" align="center" mt={5}>
+          Could not load this profile.
+        </Typography>
+      </>
+    );
+  }
+
+  // Treat blocked profiles as nonexistent
+  if (isBlocked) {
+    return (
+      <>
+        <Header />
+        <Box textAlign="center" mt={10}>
+          <Typography variant="h5" color="white" fontWeight="bold">
+            User not found
+          </Typography>
+          <Typography color="gray" mt={1}>
+            This profile is unavailable.
+          </Typography>
+        </Box>
+      </>
+    );
+  }
 
   // Profile loading
   if (profileLoading || !userProfile) {
@@ -165,7 +279,7 @@ const Profile = () => {
               bio={userProfile.profile?.bio || "No bio available"}
             />
 
-            {Number(currentUserId) !== Number(userProfile.id) && (
+            {!isOwnProfile && (
               <Box
                 mt={2}
                 display="flex"
@@ -181,6 +295,13 @@ const Profile = () => {
                 />
 
                 <MessageButton userId={userProfile.id} />
+
+                <BlockButton
+                  userId={userProfile.id}
+                  onBlockStatusChange={(blocked) => {
+                    setIsBlocked(blocked);
+                  }}
+                />
               </Box>
             )}
           </Box>
@@ -190,12 +311,13 @@ const Profile = () => {
 
         {/* Posts Section */}
         <Box mt={4}>
-          {Number(currentUserId) === Number(userProfile.id) && (
+          {isOwnProfile && (
             <>
               <Typography variant="h6" color="white" mb={3} textAlign="center">
                 Create Post
               </Typography>
-              <CreatePostForm categories={categoryList} userId={userId} />{" "}
+
+              <CreatePostForm categories={categoryList} userId={userId} />
             </>
           )}
 

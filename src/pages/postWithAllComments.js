@@ -7,7 +7,6 @@ import { useParams } from "react-router-dom";
 import PostCard from "../components/postCard";
 import Header from "../components/header";
 
-
 const PostWithAllComments = () => {
   const { postId } = useParams();
   const dispatch = useDispatch();
@@ -17,26 +16,12 @@ const PostWithAllComments = () => {
   );
 
   const postLoading = useSelector((state) => state.posts.postLoading);
-
   const postError = useSelector((state) => state.posts.postError);
 
-  const comments = useSelector(
-    (state) => state.comments.commentsByPost[postId],
-  );
-
-  // Fetch post if it isn't already in Redux
   useEffect(() => {
-    if (!post) {
-      dispatch(fetchPostById(postId));
-    }
-  }, [dispatch, postId, post]);
-
-  // Fetch comments
-  useEffect(() => {
-    if (!comments) {
-      dispatch(fetchComments(postId));
-    }
-  }, [dispatch, postId, comments]);
+    dispatch(fetchPostById(postId));
+    dispatch(fetchComments(postId));
+  }, [dispatch, postId]);
 
   if (postLoading && !post) {
     return (
@@ -54,24 +39,24 @@ const PostWithAllComments = () => {
     return <Typography>Post not found</Typography>;
   }
 
-return (
-  <>
-    <Header />
+  return (
+    <>
+      <Header />
 
-    <Paper
-      elevation={3}
-      sx={{
-        p: 2,
-        borderRadius: "16px",
-        mx: "auto",
-        maxWidth: "1000px",
-        mt: 2,
-      }}
-    >
-      <PostCard post={post} showAllComments={true} />
-    </Paper>
-  </>
-);
+      <Paper
+        elevation={3}
+        sx={{
+          p: 2,
+          borderRadius: "16px",
+          mx: "auto",
+          maxWidth: "1000px",
+          mt: 2,
+        }}
+      >
+        <PostCard post={post} showAllComments={true} />
+      </Paper>
+    </>
+  );
 };
 
 export default PostWithAllComments;
