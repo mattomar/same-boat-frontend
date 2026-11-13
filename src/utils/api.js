@@ -245,6 +245,37 @@ export const getNotifications = async () => {
   return response.data;
 };
 
+export const getUnreadNotificationCount = async () => {
+  const token = localStorage.getItem("token");
+
+  const response = await axios.get(
+    `${API_URL}/api/notifications/unread-count`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    },
+  );
+
+  return response.data.count;
+};
+
+export const markAllNotificationsRead = async () => {
+  const token = localStorage.getItem("token");
+
+  const response = await axios.put(
+    `${API_URL}/api/notifications/read-all`,
+    {},
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    },
+  );
+
+  return response.data;
+};
+
 const dmAuth = () => ({
   headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
 });

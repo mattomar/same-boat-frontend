@@ -15,6 +15,7 @@ import {
   getNotifications,
   acceptFriendRequest,
   declineFriendRequest,
+  markAllNotificationsRead
 } from "../utils/api";
 import Header from "../components/header";
 import { formatTimestamp } from "../utils/dmFormat";
@@ -54,20 +55,30 @@ const Notifications = () => {
 
   const navigate = useNavigate();
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const data = await getNotifications();
-        setNotifications(data);
-      } catch (err) {
-        console.error("Failed to load notifications:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
+useEffect(() => {
+  const fetchData = async () => {
+    try {
+      const data = await getNotifications();
+      setNotifications(data);
 
-    fetchData();
-  }, []);
+      // Mark notifications as read when the page is opened
+      await markAllNotificationsRead();
+
+      setNotifications((prev) =>
+        prev.map((notification) => ({
+          ...notification,
+          isRead: true,
+        })),
+      );
+    } catch (err) {
+      console.error("Failed to load notifications:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchData();
+}, []);
 
  const handleAccept = async (notification) => {
    try {

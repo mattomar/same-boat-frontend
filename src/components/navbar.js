@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { Box, Link, ClickAwayListener } from "@mui/material";
-import { Link as RouterLink, useNavigate } from "react-router-dom";
+import { Box, Link, ClickAwayListener, Badge } from "@mui/material";
+import { Link as RouterLink, useNavigate, useLocation } from "react-router-dom";
+
 import UserSearch from "./userSearch";
 import { disconnectDmSocket } from "../utils/dmSocket";
+import { getUnreadNotificationCount } from "../utils/api";
 
 const neonStyle = {
   fontSize: "0.9rem",
@@ -28,19 +30,60 @@ const neonStyle = {
 
 function Navbar() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const navigate = useNavigate();
   const [openSearch, setOpenSearch] = useState(false);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
+
+  const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     const token = localStorage.getItem("token");
     setIsLoggedIn(!!token);
   }, []);
 
+  // Fetch unread notification count
+  useEffect(() => {
+    if (!isLoggedIn) {
+      setUnreadNotifications(0);
+      return;
+    }
+
+    // Hide the badge while viewing notifications
+    if (location.pathname === "/notifications") {
+      setUnreadNotifications(0);
+      return;
+    }
+
+    let active = true;
+
+    const fetchUnreadCount = async () => {
+      try {
+        const count = await getUnreadNotificationCount();
+
+        if (active) {
+          setUnreadNotifications(count);
+        }
+      } catch (err) {
+        console.error("Failed to fetch unread notifications:", err);
+      }
+    };
+
+    fetchUnreadCount();
+
+    const interval = setInterval(fetchUnreadCount, 15000);
+
+    return () => {
+      active = false;
+      clearInterval(interval);
+    };
+  }, [isLoggedIn, location.pathname]);
+
   const handleLogout = () => {
     disconnectDmSocket();
     localStorage.removeItem("token");
     localStorage.removeItem("userId");
     setIsLoggedIn(false);
+    setUnreadNotifications(0);
     setOpenSearch(false);
     navigate("/");
   };
@@ -174,7 +217,22 @@ function Navbar() {
             color="white"
             sx={neonStyle}
           >
-            Notifications
+            <Badge
+              badgeContent={unreadNotifications}
+              color="error"
+              max={99}
+              invisible={unreadNotifications === 0}
+              sx={{
+                "& .MuiBadge-badge": {
+                  fontWeight: 700,
+                  fontSize: "0.7rem",
+                  minWidth: 18,
+                  height: 18,
+                },
+              }}
+            >
+              Notifications
+            </Badge>
           </Link>
 
           <Link
