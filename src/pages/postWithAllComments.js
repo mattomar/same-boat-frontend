@@ -5,6 +5,8 @@ import { fetchPostById } from "../store/postSlice";
 import { Paper, Typography, CircularProgress, Box } from "@mui/material";
 import { useParams } from "react-router-dom";
 import PostCard from "../components/postCard";
+import Header from "../components/header";
+
 
 const PostWithAllComments = () => {
   const { postId } = useParams();
@@ -52,11 +54,24 @@ const PostWithAllComments = () => {
     return <Typography>Post not found</Typography>;
   }
 
-  return (
-    <Paper elevation={3} sx={{ p: 2, borderRadius: "16px" }}>
+return (
+  <>
+    <Header />
+
+    <Paper
+      elevation={3}
+      sx={{
+        p: 2,
+        borderRadius: "16px",
+        mx: "auto",
+        maxWidth: "1000px",
+        mt: 2,
+      }}
+    >
       <PostCard post={post} showAllComments={true} />
     </Paper>
-  );
+  </>
+);
 };
 
 export default PostWithAllComments;
