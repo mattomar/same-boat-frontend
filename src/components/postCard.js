@@ -291,6 +291,7 @@ const PostCard = ({ post, showAllComments }) => {
           <Box sx={{ "& > *": { minWidth: 0 } }}>
             <CommentList
               comments={visibleComments}
+              postId={post.id}
               postOwnerId={post.user.id}
               onDeleteComment={handleDeleteComment}
             />
