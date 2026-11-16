@@ -10,7 +10,23 @@ import {
   Typography,
   Divider,
   Container,
+  Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  MenuItem,
+  Alert,
+  IconButton,
+  Menu,
+  ListItemIcon,
+  ListItemText,
 } from "@mui/material";
+
+import MoreVertIcon from "@mui/icons-material/MoreVert";
+import FlagOutlinedIcon from "@mui/icons-material/FlagOutlined";
+import BlockIcon from "@mui/icons-material/Block";
 
 import Grid from "@mui/material/Grid";
 
@@ -26,6 +42,19 @@ import BlockButton from "../components/blockButton";
 
 import { fetchCategories, checkBlockStatus } from "../utils/api";
 
+const API_URL = "http://localhost:3079/api";
+
+const reportReasons = [
+  "Spam",
+  "Harassment or bullying",
+  "Hate speech",
+  "Violence or threats",
+  "Inappropriate content",
+  "False information",
+  "Scam or fraud",
+  "Other",
+];
+
 const Profile = () => {
   const { userId } = useParams();
   const dispatch = useDispatch();
@@ -40,6 +69,18 @@ const Profile = () => {
   const [blockStatusLoading, setBlockStatusLoading] = useState(!isOwnProfile);
   const [blockStatusError, setBlockStatusError] = useState(false);
   const [isBlocked, setIsBlocked] = useState(false);
+
+  // Profile options menu
+  const [profileMenuAnchor, setProfileMenuAnchor] = useState(null);
+  const profileMenuOpen = Boolean(profileMenuAnchor);
+
+  // Report account state
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportReason, setReportReason] = useState("");
+  const [reportDetails, setReportDetails] = useState("");
+  const [reportLoading, setReportLoading] = useState(false);
+  const [reportError, setReportError] = useState("");
+  const [reportSuccess, setReportSuccess] = useState("");
 
   // Profile data
   const userProfile = useSelector((state) => state.user.profiles[userId]);
@@ -146,14 +187,11 @@ const Profile = () => {
       try {
         const token = localStorage.getItem("token");
 
-        const res = await fetch(
-          `http://localhost:3079/api/friends/status/${userProfile.id}`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
+        const res = await fetch(`${API_URL}/friends/status/${userProfile.id}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
           },
-        );
+        });
 
         if (!res.ok) {
           throw new Error("Could not fetch friend status");
@@ -172,6 +210,52 @@ const Profile = () => {
       loadStatus();
     }
   }, [userProfile?.id, isOwnProfile, isBlocked, blockStatusLoading]);
+
+  // Submit account report
+  const handleReportAccount = async () => {
+    if (!reportReason) {
+      setReportError("Please select a reason for reporting this account.");
+      return;
+    }
+
+    try {
+      setReportLoading(true);
+      setReportError("");
+
+      const token = localStorage.getItem("token");
+
+      const response = await fetch(`${API_URL}/reports`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          targetType: "user",
+          targetId: userProfile.id,
+          reason: reportReason,
+          details: reportDetails,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to submit report.");
+      }
+
+      setReportOpen(false);
+      setReportReason("");
+      setReportDetails("");
+      setReportSuccess(
+        "Account reported successfully. Thank you for helping keep the community safe.",
+      );
+    } catch (err) {
+      setReportError(err.message || "Something went wrong.");
+    } finally {
+      setReportLoading(false);
+    }
+  };
 
   // Show loading while checking whether the profile is accessible
   if (blockStatusLoading) {
@@ -296,16 +380,96 @@ const Profile = () => {
 
                 <MessageButton userId={userProfile.id} />
 
-                <BlockButton
-                  userId={userProfile.id}
-                  onBlockStatusChange={(blocked) => {
-                    setIsBlocked(blocked);
+                <IconButton
+                  onClick={(event) => setProfileMenuAnchor(event.currentTarget)}
+                  sx={{
+                    color: "white",
+                    border: "1px solid rgba(255,255,255,0.25)",
+                    borderRadius: 2,
                   }}
-                />
+                  aria-label="Profile options"
+                >
+                  <MoreVertIcon />
+                </IconButton>
+
+                <Menu
+                  anchorEl={profileMenuAnchor}
+                  open={profileMenuOpen}
+                  onClose={() => setProfileMenuAnchor(null)}
+                  anchorOrigin={{
+                    vertical: "bottom",
+                    horizontal: "right",
+                  }}
+                  transformOrigin={{
+                    vertical: "top",
+                    horizontal: "right",
+                  }}
+                  PaperProps={{
+                    sx: {
+                      minWidth: 190,
+                      backgroundColor: "#242424",
+                      color: "white",
+                      border: "1px solid rgba(255,255,255,0.12)",
+                    },
+                  }}
+                >
+                  <Box
+                    onClick={() => {
+                      setProfileMenuAnchor(null);
+                      setReportError("");
+                      setReportOpen(true);
+                    }}
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      px: 2,
+                      py: 1,
+                      cursor: "pointer",
+                      "&:hover": {
+                        backgroundColor: "rgba(255,255,255,0.08)",
+                      },
+                    }}
+                  >
+                    <ListItemIcon sx={{ color: "inherit", minWidth: 36 }}>
+                      <FlagOutlinedIcon fontSize="small" />
+                    </ListItemIcon>
+                    <ListItemText primary="Report Account" />
+                  </Box>
+
+                  <Divider sx={{ borderColor: "rgba(255,255,255,0.12)" }} />
+
+                  <Box
+                    sx={{
+                      px: 2,
+                      py: 1,
+                      "&:hover": {
+                        backgroundColor: "rgba(255,255,255,0.08)",
+                      },
+                    }}
+                  >
+                    <BlockButton
+                      userId={userProfile.id}
+                      onBlockStatusChange={(blocked) => {
+                        setProfileMenuAnchor(null);
+                        setIsBlocked(blocked);
+                      }}
+                    />
+                  </Box>
+                </Menu>
               </Box>
             )}
           </Box>
         </Box>
+
+        {reportSuccess && (
+          <Alert
+            severity="success"
+            onClose={() => setReportSuccess("")}
+            sx={{ mb: 2 }}
+          >
+            {reportSuccess}
+          </Alert>
+        )}
 
         <Divider sx={{ borderColor: "#555", mb: 3 }} />
 
@@ -354,6 +518,71 @@ const Profile = () => {
           )}
         </Box>
       </Container>
+
+      {/* Report Account Dialog */}
+      <Dialog
+        open={reportOpen}
+        onClose={() => {
+          if (!reportLoading) setReportOpen(false);
+        }}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle>Report Account</DialogTitle>
+
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" mb={2}>
+            Why are you reporting @{userProfile.username}?
+          </Typography>
+
+          {reportError && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {reportError}
+            </Alert>
+          )}
+
+          <TextField
+            select
+            fullWidth
+            label="Reason"
+            value={reportReason}
+            onChange={(e) => setReportReason(e.target.value)}
+            margin="normal"
+          >
+            {reportReasons.map((reason) => (
+              <MenuItem key={reason} value={reason}>
+                {reason}
+              </MenuItem>
+            ))}
+          </TextField>
+
+          <TextField
+            fullWidth
+            multiline
+            minRows={3}
+            label="Additional details (optional)"
+            value={reportDetails}
+            onChange={(e) => setReportDetails(e.target.value)}
+            margin="normal"
+            placeholder="Tell us a little more about the issue..."
+          />
+        </DialogContent>
+
+        <DialogActions>
+          <Button onClick={() => setReportOpen(false)} disabled={reportLoading}>
+            Cancel
+          </Button>
+
+          <Button
+            onClick={handleReportAccount}
+            color="error"
+            variant="contained"
+            disabled={reportLoading || !reportReason}
+          >
+            {reportLoading ? "Submitting..." : "Submit Report"}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </>
   );
 };

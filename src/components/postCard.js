@@ -14,22 +14,55 @@ import {
   IconButton,
   Menu,
   MenuItem,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  FormControl,
+  InputLabel,
+  Select,
+  Alert,
+  CircularProgress,
 } from "@mui/material";
 
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import FlagOutlinedIcon from "@mui/icons-material/FlagOutlined";
 
+import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import CommentInput from "../components/commentInput";
 import CommentList from "../components/commentList";
+
+const API_URL = "http://localhost:3079/api";
+
+const REPORT_REASONS = [
+  "Spam",
+  "Harassment or bullying",
+  "Hate speech",
+  "Violence or threats",
+  "Inappropriate content",
+  "False information",
+  "Scam or fraud",
+  "Other",
+];
 
 const PostCard = ({ post, showAllComments }) => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
   const currentUserId = localStorage.getItem("userId");
+  const token = localStorage.getItem("token");
 
   const [postMenuAnchor, setPostMenuAnchor] = useState(null);
+
+  const [reportDialogOpen, setReportDialogOpen] = useState(false);
+  const [reportReason, setReportReason] = useState("");
+  const [reportDetails, setReportDetails] = useState("");
+  const [reportLoading, setReportLoading] = useState(false);
+  const [reportError, setReportError] = useState("");
+  const [reportSuccess, setReportSuccess] = useState("");
 
   const isPostOwner = String(currentUserId) === String(post.user.id);
 
@@ -47,9 +80,9 @@ const PostCard = ({ post, showAllComments }) => {
     }
   }, [dispatch, post.user.id, userProfile]);
 
-useEffect(() => {
-  dispatch(fetchComments(post.id));
-}, [dispatch, post.id]);
+  useEffect(() => {
+    dispatch(fetchComments(post.id));
+  }, [dispatch, post.id]);
 
   const handleUserClick = () => {
     navigate(`/profile/${post.user.id}`);
@@ -59,7 +92,65 @@ useEffect(() => {
     navigate(`/post/${post.id}/comments`);
   };
 
-  // Delete a comment
+  const handleOpenReportDialog = () => {
+    setPostMenuAnchor(null);
+    setReportReason("");
+    setReportDetails("");
+    setReportError("");
+    setReportSuccess("");
+    setReportDialogOpen(true);
+  };
+
+  const handleCloseReportDialog = () => {
+    if (reportLoading) return;
+    setReportDialogOpen(false);
+  };
+
+  const handleSubmitReport = async () => {
+    if (!reportReason) {
+      setReportError("Please select a reason for reporting this post.");
+      return;
+    }
+
+    setReportLoading(true);
+    setReportError("");
+
+    try {
+      await axios.post(
+        `${API_URL}/reports`,
+        {
+          targetType: "post",
+          targetId: post.id,
+          reason: reportReason,
+          details: reportDetails,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      setReportDialogOpen(false);
+      setReportSuccess("Report submitted successfully.");
+      setReportReason("");
+      setReportDetails("");
+    } catch (error) {
+      console.error("Failed to submit report:", error);
+
+      if (error.response?.status === 409) {
+        setReportError("You have already reported this post.");
+      } else {
+        setReportError(
+          error.response?.data?.error ||
+            "Could not submit your report. Please try again.",
+        );
+      }
+    } finally {
+      setReportLoading(false);
+    }
+  };
+
   const handleDeleteComment = async (commentId) => {
     const confirmed = window.confirm(
       "Are you sure you want to delete this comment? Its replies will also be deleted.",
@@ -82,7 +173,6 @@ useEffect(() => {
     }
   };
 
-  // Delete the post
   const handleDeletePost = async () => {
     setPostMenuAnchor(null);
 
@@ -184,35 +274,45 @@ useEffect(() => {
             </Typography>
           </Box>
 
-          {isPostOwner && (
-            <>
-              <IconButton
-                size="small"
-                onClick={(event) => setPostMenuAnchor(event.currentTarget)}
-              >
-                <MoreVertIcon />
-              </IconButton>
+          <IconButton
+            size="small"
+            onClick={(event) => setPostMenuAnchor(event.currentTarget)}
+          >
+            <MoreVertIcon />
+          </IconButton>
 
-              <Menu
-                anchorEl={postMenuAnchor}
-                open={Boolean(postMenuAnchor)}
-                onClose={() => setPostMenuAnchor(null)}
-              >
-                <MenuItem
-                  onClick={handleDeletePost}
-                  sx={{ color: "error.main" }}
-                >
-                  <DeleteOutlineIcon fontSize="small" sx={{ mr: 1 }} />
-                  Delete post
-                </MenuItem>
-              </Menu>
-            </>
-          )}
+          <Menu
+            anchorEl={postMenuAnchor}
+            open={Boolean(postMenuAnchor)}
+            onClose={() => setPostMenuAnchor(null)}
+          >
+            {isPostOwner ? (
+              <MenuItem onClick={handleDeletePost} sx={{ color: "error.main" }}>
+                <DeleteOutlineIcon fontSize="small" sx={{ mr: 1 }} />
+                Delete post
+              </MenuItem>
+            ) : (
+              <MenuItem onClick={handleOpenReportDialog}>
+                <FlagOutlinedIcon fontSize="small" sx={{ mr: 1 }} />
+                Report post
+              </MenuItem>
+            )}
+          </Menu>
         </Box>
       ) : (
         <Typography variant="body2" sx={{ color: "#d32f2f" }}>
           User not found
         </Typography>
+      )}
+
+      {reportSuccess && (
+        <Alert
+          severity="success"
+          onClose={() => setReportSuccess("")}
+          sx={{ mb: 2 }}
+        >
+          {reportSuccess}
+        </Alert>
       )}
 
       {/* Main Post */}
@@ -339,6 +439,75 @@ useEffect(() => {
       >
         <CommentInput postId={post.id} />
       </Box>
+
+      {/* Report Dialog */}
+      <Dialog
+        open={reportDialogOpen}
+        onClose={handleCloseReportDialog}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle>Report post</DialogTitle>
+
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Why are you reporting this post? Your report will be reviewed by the
+            moderation team.
+          </Typography>
+
+          {reportError && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {reportError}
+            </Alert>
+          )}
+
+          <FormControl fullWidth sx={{ mb: 2 }}>
+            <InputLabel id={`report-reason-${post.id}`}>Reason</InputLabel>
+            <Select
+              labelId={`report-reason-${post.id}`}
+              value={reportReason}
+              label="Reason"
+              onChange={(event) => setReportReason(event.target.value)}
+            >
+              {REPORT_REASONS.map((reason) => (
+                <MenuItem key={reason} value={reason}>
+                  {reason}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+          <TextField
+            fullWidth
+            multiline
+            minRows={3}
+            label="Additional details (optional)"
+            placeholder="Tell us more about the issue..."
+            value={reportDetails}
+            onChange={(event) => setReportDetails(event.target.value)}
+            inputProps={{ maxLength: 1000 }}
+          />
+        </DialogContent>
+
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={handleCloseReportDialog} disabled={reportLoading}>
+            Cancel
+          </Button>
+
+          <Button
+            variant="contained"
+            color="error"
+            onClick={handleSubmitReport}
+            disabled={reportLoading || !reportReason}
+          >
+            {reportLoading ? (
+              <CircularProgress size={22} color="inherit" />
+            ) : (
+              "Submit report"
+            )}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Paper>
   );
 };

@@ -70,10 +70,17 @@ const AdminDashboard = () => {
 
   const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
   const [selectedReport, setSelectedReport] = useState(null);
+
   const [reviewStatus, setReviewStatus] = useState("reviewed");
   const [resolutionNote, setResolutionNote] = useState("");
+
   const [reviewLoading, setReviewLoading] = useState(false);
   const [reviewError, setReviewError] = useState("");
+
+  // MODERATION ACTIONS
+  const [moderationAction, setModerationAction] = useState("");
+  const [moderationLoading, setModerationLoading] = useState(false);
+  const [moderationError, setModerationError] = useState("");
 
   // FETCH OVERVIEW
   useEffect(() => {
@@ -113,6 +120,7 @@ const AdminDashboard = () => {
       });
 
       setUsers(response.data.users || []);
+
       setTotalUsers(
         response.data.pagination?.totalUsers ??
           response.data.pagination?.total ??
@@ -151,6 +159,7 @@ const AdminDashboard = () => {
       });
 
       setReports(response.data.reports || []);
+
       setTotalReports(
         response.data.pagination?.totalReports ??
           response.data.pagination?.total ??
@@ -238,12 +247,19 @@ const AdminDashboard = () => {
     setReviewStatus("reviewed");
     setResolutionNote("");
     setReviewError("");
+    setModerationAction("");
+    setModerationError("");
     setReviewDialogOpen(true);
   };
 
-  // REVIEW REPORT
+  // REVIEW OR DISMISS REPORT
   const handleReviewReport = async () => {
     if (!selectedReport) return;
+
+    if (!resolutionNote.trim()) {
+      setReviewError("Please provide a resolution note.");
+      return;
+    }
 
     setReviewLoading(true);
     setReviewError("");
@@ -262,11 +278,80 @@ const AdminDashboard = () => {
       setSelectedReport(null);
 
       await fetchReports();
+
+      const overviewResponse = await axios.get(
+        `${API_URL}/admin/overview`,
+        authConfig,
+      );
+
+      setOverview(overviewResponse.data.overview);
     } catch (err) {
       setReviewError(err.response?.data?.error || "Failed to review report.");
     } finally {
       setReviewLoading(false);
     }
+  };
+
+  // EXECUTE MODERATION ACTION
+  const handleModerationAction = async () => {
+    if (!selectedReport || !moderationAction) {
+      setModerationError("Please select a moderation action.");
+      return;
+    }
+
+    if (!resolutionNote.trim()) {
+      setModerationError("Please provide a resolution note.");
+      return;
+    }
+
+    const actionDescription =
+      moderationAction === "remove_content"
+        ? "remove this reported content"
+        : `ban @${selectedReport.reportedUser?.username || "this user"}`;
+
+    const confirmed = window.confirm(
+      `Are you sure you want to ${actionDescription}? This action will be recorded.`,
+    );
+
+    if (!confirmed) return;
+
+    setModerationLoading(true);
+    setModerationError("");
+
+    try {
+      await axios.patch(
+        `${API_URL}/admin/reports/${selectedReport.id}/action`,
+        {
+          action: moderationAction,
+          resolutionNote: resolutionNote.trim(),
+        },
+        authConfig,
+      );
+
+      setReviewDialogOpen(false);
+      setSelectedReport(null);
+
+      await fetchReports();
+
+      const overviewResponse = await axios.get(
+        `${API_URL}/admin/overview`,
+        authConfig,
+      );
+
+      setOverview(overviewResponse.data.overview);
+    } catch (err) {
+      setModerationError(
+        err.response?.data?.error || "Failed to execute moderation action.",
+      );
+    } finally {
+      setModerationLoading(false);
+    }
+  };
+
+  // SELECT MODERATION ACTION
+  const selectModerationAction = (action) => {
+    setModerationAction(action);
+    setModerationError("");
   };
 
   if (loading) {
@@ -326,14 +411,8 @@ const AdminDashboard = () => {
             }}
           >
             {[
-              {
-                label: "Total Users",
-                value: overview?.totalUsers ?? 0,
-              },
-              {
-                label: "Total Posts",
-                value: overview?.totalPosts ?? 0,
-              },
+              { label: "Total Users", value: overview?.totalUsers ?? 0 },
+              { label: "Total Posts", value: overview?.totalPosts ?? 0 },
               {
                 label: "Total Comments",
                 value: overview?.totalComments ?? 0,
@@ -428,6 +507,7 @@ const AdminDashboard = () => {
                             <Typography fontWeight="medium">
                               @{user.username}
                             </Typography>
+
                             <Typography
                               variant="caption"
                               color="text.secondary"
@@ -651,7 +731,7 @@ const AdminDashboard = () => {
         </Box>
       )}
 
-      {/* BAN DIALOG */}
+      {/* BAN USER DIALOG */}
       <Dialog
         open={banDialogOpen}
         onClose={() => {
@@ -705,16 +785,18 @@ const AdminDashboard = () => {
         </DialogActions>
       </Dialog>
 
-      {/* REPORT REVIEW DIALOG */}
+      {/* REPORT REVIEW AND MODERATION DIALOG */}
       <Dialog
         open={reviewDialogOpen}
         onClose={() => {
-          if (!reviewLoading) setReviewDialogOpen(false);
+          if (!reviewLoading && !moderationLoading) {
+            setReviewDialogOpen(false);
+          }
         }}
         fullWidth
         maxWidth="sm"
       >
-        <DialogTitle>Review Report #{selectedReport?.id}</DialogTitle>
+        <DialogTitle>Report #{selectedReport?.id}</DialogTitle>
 
         <DialogContent>
           {selectedReport && (
@@ -722,6 +804,7 @@ const AdminDashboard = () => {
               <Typography variant="body2" color="text.secondary">
                 Reported user
               </Typography>
+
               <Typography sx={{ mb: 2 }}>
                 @{selectedReport.reportedUser?.username || "Unknown"}
               </Typography>
@@ -729,6 +812,7 @@ const AdminDashboard = () => {
               <Typography variant="body2" color="text.secondary">
                 Reported by
               </Typography>
+
               <Typography sx={{ mb: 2 }}>
                 @{selectedReport.reporter?.username || "Unknown"}
               </Typography>
@@ -736,6 +820,7 @@ const AdminDashboard = () => {
               <Typography variant="body2" color="text.secondary">
                 Target
               </Typography>
+
               <Typography sx={{ mb: 2 }}>
                 {selectedReport.targetType} #{selectedReport.targetId}
               </Typography>
@@ -743,11 +828,13 @@ const AdminDashboard = () => {
               <Typography variant="body2" color="text.secondary">
                 Reason
               </Typography>
+
               <Typography sx={{ mb: 2 }}>{selectedReport.reason}</Typography>
 
               <Typography variant="body2" color="text.secondary">
                 Additional details
               </Typography>
+
               <Typography sx={{ mb: 2 }}>
                 {selectedReport.details || "No additional details provided."}
               </Typography>
@@ -755,8 +842,9 @@ const AdminDashboard = () => {
               {selectedReport.targetSnapshot && (
                 <>
                   <Typography variant="body2" color="text.secondary">
-                    Content snapshot
+                    Reported content snapshot
                   </Typography>
+
                   <Paper
                     variant="outlined"
                     sx={{
@@ -778,28 +866,162 @@ const AdminDashboard = () => {
 
           {selectedReport?.status === "pending" ? (
             <>
-              <TextField
-                select
-                fullWidth
-                label="Decision"
-                value={reviewStatus}
-                onChange={(event) => setReviewStatus(event.target.value)}
-                sx={{ mb: 2 }}
+              <Typography fontWeight="bold" sx={{ mb: 1 }}>
+                Choose a moderation action
+              </Typography>
+
+              {/* ACTION BUTTONS */}
+              <Box
+                sx={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 1.5,
+                  mb: 2,
+                }}
               >
-                <MenuItem value="reviewed">Reviewed — no action yet</MenuItem>
-                <MenuItem value="actioned">Actioned — action taken</MenuItem>
-                <MenuItem value="dismissed">Dismissed — no violation</MenuItem>
-              </TextField>
+                {(selectedReport?.targetType === "post" ||
+                  selectedReport?.targetType === "comment") && (
+                  <Button
+                    fullWidth
+                    variant={
+                      moderationAction === "remove_content"
+                        ? "contained"
+                        : "outlined"
+                    }
+                    color="error"
+                    onClick={() => selectModerationAction("remove_content")}
+                    disabled={moderationLoading || reviewLoading}
+                    sx={{
+                      py: 1.5,
+                      justifyContent: "flex-start",
+                      borderWidth:
+                        moderationAction === "remove_content" ? 2 : 1,
+                    }}
+                  >
+                    {moderationAction === "remove_content" ? "✓ " : ""}
+                    Remove reported content
+                  </Button>
+                )}
+
+                <Button
+                  fullWidth
+                  variant={
+                    moderationAction === "ban_user" ? "contained" : "outlined"
+                  }
+                  color="error"
+                  onClick={() => selectModerationAction("ban_user")}
+                  disabled={
+                    !selectedReport?.reportedUser ||
+                    moderationLoading ||
+                    reviewLoading
+                  }
+                  sx={{
+                    py: 1.5,
+                    justifyContent: "flex-start",
+                    borderWidth: moderationAction === "ban_user" ? 2 : 1,
+                  }}
+                >
+                  {moderationAction === "ban_user" ? "✓ " : ""}
+                  {selectedReport?.targetType === "user"
+                    ? "Ban reported user"
+                    : "Ban content author"}
+                </Button>
+              </Box>
+
+              {!selectedReport?.reportedUser && (
+                <Alert severity="info" sx={{ mb: 2 }}>
+                  Reported user information is unavailable. Banning is disabled.
+                </Alert>
+              )}
+
+              {moderationAction && (
+                <Alert severity="warning" sx={{ mb: 2 }}>
+                  {moderationAction === "remove_content"
+                    ? "This will permanently remove the reported content. The report and its evidence snapshot will be preserved."
+                    : "This will ban the reported user and prevent them from accessing their account."}
+                </Alert>
+              )}
+
+              <Typography fontWeight="bold" sx={{ mb: 1 }}>
+                Resolution note
+              </Typography>
 
               <TextField
                 fullWidth
                 multiline
                 minRows={3}
-                label="Resolution note"
-                placeholder="Explain your decision..."
+                placeholder="Explain your decision or moderation action..."
                 value={resolutionNote}
                 onChange={(event) => setResolutionNote(event.target.value)}
+                disabled={moderationLoading || reviewLoading}
+                sx={{ mb: 3 }}
               />
+
+              {moderationError && (
+                <Alert severity="error" sx={{ mb: 2 }}>
+                  {moderationError}
+                </Alert>
+              )}
+
+              <Button
+                fullWidth
+                variant="contained"
+                color="error"
+                onClick={handleModerationAction}
+                disabled={
+                  !moderationAction ||
+                  !resolutionNote.trim() ||
+                  moderationLoading ||
+                  reviewLoading
+                }
+                sx={{ mb: 3 }}
+              >
+                {moderationLoading
+                  ? "Executing action..."
+                  : "Execute Moderation Action"}
+              </Button>
+
+              {/* REVIEW WITHOUT MODERATION */}
+              <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
+                <Typography fontWeight="bold" sx={{ mb: 2 }}>
+                  Review without taking action
+                </Typography>
+
+                <TextField
+                  select
+                  fullWidth
+                  label="Decision"
+                  value={reviewStatus}
+                  onChange={(event) => setReviewStatus(event.target.value)}
+                  disabled={reviewLoading || moderationLoading}
+                  sx={{ mb: 2 }}
+                >
+                  <MenuItem value="reviewed">
+                    Reviewed — no action taken
+                  </MenuItem>
+
+                  <MenuItem value="dismissed">
+                    Dismissed — no violation found
+                  </MenuItem>
+                </TextField>
+
+                <Button
+                  fullWidth
+                  variant="outlined"
+                  onClick={handleReviewReport}
+                  disabled={
+                    !resolutionNote.trim() || reviewLoading || moderationLoading
+                  }
+                >
+                  {reviewLoading ? "Saving..." : "Save Review Decision"}
+                </Button>
+
+                {reviewError && (
+                  <Alert severity="error" sx={{ mt: 2 }}>
+                    {reviewError}
+                  </Alert>
+                )}
+              </Paper>
             </>
           ) : (
             <Alert severity="info">
@@ -813,31 +1035,15 @@ const AdminDashboard = () => {
               </Typography>
             </Alert>
           )}
-
-          {reviewError && (
-            <Alert severity="error" sx={{ mt: 2 }}>
-              {reviewError}
-            </Alert>
-          )}
         </DialogContent>
 
         <DialogActions sx={{ p: 2 }}>
           <Button
             onClick={() => setReviewDialogOpen(false)}
-            disabled={reviewLoading}
+            disabled={reviewLoading || moderationLoading}
           >
             Close
           </Button>
-
-          {selectedReport?.status === "pending" && (
-            <Button
-              variant="contained"
-              onClick={handleReviewReport}
-              disabled={reviewLoading}
-            >
-              {reviewLoading ? "Saving..." : "Submit Decision"}
-            </Button>
-          )}
         </DialogActions>
       </Dialog>
     </Box>

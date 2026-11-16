@@ -8,15 +8,35 @@ import {
   Menu,
   MenuItem,
   TextField,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  Alert,
 } from "@mui/material";
 
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import FlagOutlinedIcon from "@mui/icons-material/FlagOutlined";
 
 import { useDispatch, useSelector } from "react-redux";
 import { fetchComments, postComment } from "../store/commentSlice";
 import { fetchUserProfile } from "../store/userSlice";
 import { useNavigate, useLocation } from "react-router-dom";
+
+const API_URL = "http://localhost:3079/api";
+
+const reportReasons = [
+  "Spam",
+  "Harassment or bullying",
+  "Hate speech",
+  "Violence or threats",
+  "Inappropriate content",
+  "False information",
+  "Scam or fraud",
+  "Other",
+];
 
 const CommentList = ({
   comments = [],
@@ -42,6 +62,14 @@ const CommentList = ({
   const [replyError, setReplyError] = useState("");
 
   const [expandedReplies, setExpandedReplies] = useState({});
+
+  // Report comment state
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportReason, setReportReason] = useState("");
+  const [reportDetails, setReportDetails] = useState("");
+  const [reportLoading, setReportLoading] = useState(false);
+  const [reportError, setReportError] = useState("");
+  const [reportSuccess, setReportSuccess] = useState("");
 
   // Flatten nested comments to fetch every author's profile.
   const flattenComments = (commentList) => {
@@ -113,7 +141,6 @@ const CommentList = ({
         target.style.backgroundColor = "transparent";
       }, 2500);
 
-      // Store timer on the element for cleanup.
       target.dataset.highlightTimer = highlightTimer;
     }, 500);
 
@@ -165,9 +192,18 @@ const CommentList = ({
     );
   };
 
-  // Delete menu.
-  const renderDeleteButton = (comment) => {
-    if (!canDeleteComment(comment)) return null;
+  // A user cannot report their own comment.
+  const canReportComment = (comment) => {
+    return (
+      Boolean(currentUserId) && String(currentUserId) !== String(comment.userId)
+    );
+  };
+
+  // Show the menu if the user can delete or report the comment.
+  const renderCommentMenu = (comment) => {
+    if (!canDeleteComment(comment) && !canReportComment(comment)) {
+      return null;
+    }
 
     return (
       <IconButton
@@ -176,6 +212,7 @@ const CommentList = ({
           setMenuAnchor(event.currentTarget);
           setSelectedComment(comment);
         }}
+        aria-label="Comment options"
       >
         <MoreVertIcon fontSize="small" />
       </IconButton>
@@ -193,6 +230,61 @@ const CommentList = ({
     }
 
     handleCloseMenu();
+  };
+
+  // Open the report dialog for the selected comment.
+  const handleOpenReport = () => {
+    setMenuAnchor(null);
+    setReportReason("");
+    setReportDetails("");
+    setReportError("");
+    setReportOpen(true);
+  };
+
+  // Submit comment report.
+  const handleReportComment = async () => {
+    if (!selectedComment || !reportReason) {
+      setReportError("Please select a reason for reporting this comment.");
+      return;
+    }
+
+    try {
+      setReportLoading(true);
+      setReportError("");
+
+      const token = localStorage.getItem("token");
+
+      const response = await fetch(`${API_URL}/reports`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          targetType: "comment",
+          targetId: selectedComment.id,
+          reason: reportReason,
+          details: reportDetails,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to submit report.");
+      }
+
+      setReportOpen(false);
+      setReportReason("");
+      setReportDetails("");
+      setReportSuccess("Comment reported successfully. Thank you!");
+
+      handleCloseMenu();
+    } catch (error) {
+      setReportError(error.message || "Something went wrong.");
+    } finally {
+      setReportLoading(false);
+    }
   };
 
   // Open reply input and automatically mention the parent author.
@@ -240,7 +332,6 @@ const CommentList = ({
         }),
       ).unwrap();
 
-      // Refresh the complete nested comment structure.
       await dispatch(fetchComments(postId)).unwrap();
 
       setReplyingTo(null);
@@ -339,7 +430,7 @@ const CommentList = ({
                 {username}
               </Typography>
 
-              {renderDeleteButton(comment)}
+              {renderCommentMenu(comment)}
             </Box>
 
             <Typography
@@ -352,7 +443,7 @@ const CommentList = ({
               {renderCommentContent(comment.content, parentComment)}
             </Typography>
 
-            {/* Small Reply text */}
+            {/* Reply text */}
             <Typography
               component="span"
               onClick={() => handleReplyClick(comment)}
@@ -515,6 +606,16 @@ const CommentList = ({
 
   return (
     <Box mt={2}>
+      {reportSuccess && (
+        <Alert
+          severity="success"
+          onClose={() => setReportSuccess("")}
+          sx={{ mb: 2 }}
+        >
+          {reportSuccess}
+        </Alert>
+      )}
+
       {comments.length === 0 ? (
         <Typography variant="body2">No comments yet</Typography>
       ) : (
@@ -542,17 +643,102 @@ const CommentList = ({
         ))
       )}
 
-      {/* Delete menu */}
+      {/* Comment options menu */}
       <Menu
         anchorEl={menuAnchor}
         open={Boolean(menuAnchor)}
         onClose={handleCloseMenu}
       >
-        <MenuItem onClick={handleDeleteComment} sx={{ color: "error.main" }}>
-          <DeleteOutlineIcon fontSize="small" sx={{ mr: 1 }} />
-          Delete comment
-        </MenuItem>
+        {selectedComment && canDeleteComment(selectedComment) && (
+          <MenuItem onClick={handleDeleteComment} sx={{ color: "error.main" }}>
+            <DeleteOutlineIcon fontSize="small" sx={{ mr: 1 }} />
+            Delete comment
+          </MenuItem>
+        )}
+
+        {selectedComment && canReportComment(selectedComment) && (
+          <MenuItem onClick={handleOpenReport}>
+            <FlagOutlinedIcon fontSize="small" sx={{ mr: 1 }} />
+            Report comment
+          </MenuItem>
+        )}
       </Menu>
+
+      {/* Report Comment Dialog */}
+      <Dialog
+        open={reportOpen}
+        onClose={() => {
+          if (!reportLoading) {
+            setReportOpen(false);
+            setSelectedComment(null);
+          }
+        }}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle>Report Comment</DialogTitle>
+
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" mb={2}>
+            {selectedComment
+              ? `Why are you reporting @${getUsername(selectedComment)}'s comment?`
+              : "Why are you reporting this comment?"}
+          </Typography>
+
+          {reportError && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {reportError}
+            </Alert>
+          )}
+
+          <TextField
+            select
+            fullWidth
+            label="Reason"
+            value={reportReason}
+            onChange={(event) => setReportReason(event.target.value)}
+            margin="normal"
+          >
+            {reportReasons.map((reason) => (
+              <MenuItem key={reason} value={reason}>
+                {reason}
+              </MenuItem>
+            ))}
+          </TextField>
+
+          <TextField
+            fullWidth
+            multiline
+            minRows={3}
+            label="Additional details (optional)"
+            value={reportDetails}
+            onChange={(event) => setReportDetails(event.target.value)}
+            margin="normal"
+            placeholder="Tell us a little more about the issue..."
+          />
+        </DialogContent>
+
+        <DialogActions>
+          <Button
+            onClick={() => {
+              setReportOpen(false);
+              setSelectedComment(null);
+            }}
+            disabled={reportLoading}
+          >
+            Cancel
+          </Button>
+
+          <Button
+            onClick={handleReportComment}
+            color="error"
+            variant="contained"
+            disabled={reportLoading || !reportReason || !selectedComment}
+          >
+            {reportLoading ? "Submitting..." : "Submit Report"}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };
