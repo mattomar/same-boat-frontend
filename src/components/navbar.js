@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from "react";
-import { Box, Link, ClickAwayListener, Badge } from "@mui/material";
+import { Box, Link, ClickAwayListener, Badge, Button } from "@mui/material";
 import { Link as RouterLink, useNavigate, useLocation } from "react-router-dom";
 
 import UserSearch from "../components/userSearch";
 import { disconnectDmSocket } from "../utils/dmSocket";
 import { getUnreadNotificationCount, getConversations } from "../utils/api";
+
+const API_URL = "http://localhost:3079/api";
 
 const neonStyle = {
   fontSize: "0.9rem",
@@ -30,6 +32,7 @@ const neonStyle = {
 
 function Navbar() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [openSearch, setOpenSearch] = useState(false);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [unreadMessages, setUnreadMessages] = useState(0);
@@ -40,9 +43,47 @@ function Navbar() {
   useEffect(() => {
     const token = localStorage.getItem("token");
     setIsLoggedIn(!!token);
-  }, []);
+  }, [location.pathname]);
 
-  // Fetch unread message count
+  // CHECK WHETHER THE CURRENT USER IS AN ADMIN
+  useEffect(() => {
+    if (!isLoggedIn) {
+      setIsAdmin(false);
+      return;
+    }
+
+    let active = true;
+
+    const checkAdmin = async () => {
+      try {
+        const token = localStorage.getItem("token");
+
+        const response = await fetch(`${API_URL}/admin/overview`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (active) {
+          setIsAdmin(response.ok);
+        }
+      } catch (err) {
+        console.error("Failed to verify admin access:", err);
+
+        if (active) {
+          setIsAdmin(false);
+        }
+      }
+    };
+
+    checkAdmin();
+
+    return () => {
+      active = false;
+    };
+  }, [isLoggedIn]);
+
+  // FETCH UNREAD MESSAGE COUNT
   useEffect(() => {
     if (!isLoggedIn) {
       setUnreadMessages(0);
@@ -67,13 +108,10 @@ function Navbar() {
       }
     };
 
-    // Fetch immediately
     fetchUnreadMessages();
 
-    // Refresh when a conversation is marked as read
     window.addEventListener("dm:unread-updated", fetchUnreadMessages);
 
-    // Keep the periodic refresh as a backup
     const interval = setInterval(fetchUnreadMessages, 15000);
 
     return () => {
@@ -83,34 +121,30 @@ function Navbar() {
     };
   }, [isLoggedIn, location.pathname]);
 
-  // Fetch unread message count
+  // FETCH UNREAD NOTIFICATION COUNT
   useEffect(() => {
     if (!isLoggedIn) {
-      setUnreadMessages(0);
+      setUnreadNotifications(0);
       return;
     }
 
     let active = true;
 
-    const fetchUnreadMessages = async () => {
+    const fetchNotifications = async () => {
       try {
-        const conversations = await getConversations();
-
-        const count = conversations.filter(
-          (c) => (c.unreadCount || 0) > 0,
-        ).length;
+        const count = await getUnreadNotificationCount();
 
         if (active) {
-          setUnreadMessages(count);
+          setUnreadNotifications(count);
         }
       } catch (err) {
-        console.error("Failed to fetch unread messages:", err);
+        console.error("Failed to fetch unread notifications:", err);
       }
     };
 
-    fetchUnreadMessages();
+    fetchNotifications();
 
-    const interval = setInterval(fetchUnreadMessages, 15000);
+    const interval = setInterval(fetchNotifications, 15000);
 
     return () => {
       active = false;
@@ -122,10 +156,13 @@ function Navbar() {
     disconnectDmSocket();
     localStorage.removeItem("token");
     localStorage.removeItem("userId");
+
     setIsLoggedIn(false);
+    setIsAdmin(false);
     setUnreadNotifications(0);
     setUnreadMessages(0);
     setOpenSearch(false);
+
     navigate("/");
   };
 
@@ -134,6 +171,8 @@ function Navbar() {
       sx={{
         display: "flex",
         justifyContent: "flex-end",
+        alignItems: "center",
+        flexWrap: "wrap",
         backgroundColor: "transparent",
         padding: "10px 0",
         width: "100%",
@@ -310,6 +349,25 @@ function Navbar() {
           >
             Settings
           </Link>
+
+          {isAdmin && (
+            <Button
+              variant="outlined"
+              onClick={() => navigate("/admin")}
+              sx={{
+                color: "#fff",
+                borderColor: "#fff",
+                textTransform: "none",
+                borderRadius: 2,
+                "&:hover": {
+                  borderColor: "#fff",
+                  backgroundColor: "rgba(255,255,255,0.1)",
+                },
+              }}
+            >
+              Admin
+            </Button>
+          )}
 
           <Link
             underline="none"

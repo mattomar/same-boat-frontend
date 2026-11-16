@@ -12,6 +12,8 @@ import Messages from "../pages/messages";
 import Conversation from "../pages/conversation";
 import BlockedUsers from "../pages/blockedUsers";
 import Settings from "../pages/seetings";
+import AdminDashboard from "../pages/adminDashboard";
+
 import React from "react";
 
 const routes = [
@@ -74,6 +76,10 @@ const routes = [
   {
     path: "/settings",
     element: <Settings />,
+  },
+  {
+    path: "/admin",
+    element: <AdminDashboard />,
   },
 ];
 
