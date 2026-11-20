@@ -525,3 +525,51 @@ export const deleteDirectMessage = async (messageId) => {
       return dmError(e);
     }
   };
+
+  export const getBanStatus = async () => {
+    try {
+      return (
+        await axios.get(
+          `${API_URL}/api/moderation-appeals/ban-status`,
+          dmAuth(),
+        )
+      ).data;
+    } catch (e) {
+      return dmError(e);
+    }
+  };
+
+  export const submitModerationAppeal = async (
+    moderationLogId,
+    explanation,
+  ) => {
+    try {
+      return (
+        await axios.post(
+          `${API_URL}/api/moderation-appeals`,
+          { moderationLogId, explanation },
+          dmAuth(),
+        )
+      ).data;
+    } catch (e) {
+      return dmError(e);
+    }
+  };
+
+  // If a user gets banned mid-session, send them to the appeal page
+  axios.interceptors.response.use(
+    (res) => res,
+    (error) => {
+      const data = error.response && error.response.data;
+      if (
+        error.response &&
+        error.response.status === 403 &&
+        data &&
+        data.banned &&
+        window.location.pathname !== "/banned"
+      ) {
+      window.history.pushState({}, "", "/banned");
+      window.dispatchEvent(new PopStateEvent("popstate"));      }
+      return Promise.reject(error);
+    },
+  );

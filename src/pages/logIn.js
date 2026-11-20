@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import AuthForm from "../components/authForm";
 import { Container, Typography, CircularProgress, Box, Alert } from "@mui/material";
 import { jwtDecode } from "jwt-decode";
-import { logIn } from "../utils/api"; // your async function
+import { logIn, getBanStatus } from "../utils/api"; // your async function
 
 const Login = () => {
   const navigate = useNavigate();
@@ -27,7 +27,8 @@ const Login = () => {
       localStorage.setItem("token", data.token);
       localStorage.setItem("userId", userId);
 
-      navigate(`/`);
+const status = await getBanStatus();
+navigate(status.banned ? "/banned" : "/");
     } catch (err) {
       setError(typeof err === "string" ? err : err.message || "Login failed");
     } finally {

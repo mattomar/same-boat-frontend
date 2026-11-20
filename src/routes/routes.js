@@ -13,6 +13,7 @@ import Conversation from "../pages/conversation";
 import BlockedUsers from "../pages/blockedUsers";
 import Settings from "../pages/seetings";
 import AdminDashboard from "../pages/adminDashboard";
+import BannedAppeal from "../pages/BannedAppeal";
 
 import React from "react";
 
@@ -80,6 +81,10 @@ const routes = [
   {
     path: "/admin",
     element: <AdminDashboard />,
+  },
+  {
+    path: "/banned",
+    element: <BannedAppeal />,
   },
 ];
 

@@ -12,6 +12,7 @@ module.exports = {
     port: 30056,
     open: true,
     hot: true,
+    historyApiFallback: true,
     static: path.resolve(__dirname, "dist"),
   },
   module: {

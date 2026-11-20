@@ -30,10 +30,6 @@ const API_URL = "http://localhost:3079/api";
 const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState(0);
 
-  const [overview, setOverview] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-
   const token = localStorage.getItem("token");
 
   const authConfig = {
@@ -42,11 +38,15 @@ const AdminDashboard = () => {
     },
   };
 
+  // OVERVIEW
+  const [overview, setOverview] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
   // USER MANAGEMENT
   const [users, setUsers] = useState([]);
   const [usersLoading, setUsersLoading] = useState(false);
   const [usersError, setUsersError] = useState("");
-
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(20);
@@ -63,17 +63,14 @@ const AdminDashboard = () => {
   const [reports, setReports] = useState([]);
   const [reportsLoading, setReportsLoading] = useState(false);
   const [reportsError, setReportsError] = useState("");
-
   const [reportStatus, setReportStatus] = useState("pending");
   const [reportPage, setReportPage] = useState(0);
   const [totalReports, setTotalReports] = useState(0);
 
   const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
   const [selectedReport, setSelectedReport] = useState(null);
-
   const [reviewStatus, setReviewStatus] = useState("reviewed");
   const [resolutionNote, setResolutionNote] = useState("");
-
   const [reviewLoading, setReviewLoading] = useState(false);
   const [reviewError, setReviewError] = useState("");
 
@@ -82,27 +79,35 @@ const AdminDashboard = () => {
   const [moderationLoading, setModerationLoading] = useState(false);
   const [moderationError, setModerationError] = useState("");
 
+  // APPEAL MANAGEMENT
+  const [appeals, setAppeals] = useState([]);
+  const [appealsLoading, setAppealsLoading] = useState(false);
+  const [appealsError, setAppealsError] = useState("");
+  const [appealStatus, setAppealStatus] = useState("pending");
+
+  const [appealDialogOpen, setAppealDialogOpen] = useState(false);
+  const [selectedAppeal, setSelectedAppeal] = useState(null);
+  const [appealDecision, setAppealDecision] = useState("accepted");
+  const [appealResponse, setAppealResponse] = useState("");
+  const [appealActionLoading, setAppealActionLoading] = useState(false);
+  const [appealActionError, setAppealActionError] = useState("");
+
   // FETCH OVERVIEW
-  useEffect(() => {
-    const fetchOverview = async () => {
-      try {
-        const response = await axios.get(
-          `${API_URL}/admin/overview`,
-          authConfig,
-        );
-
-        setOverview(response.data.overview);
-      } catch (err) {
-        setError(
-          err.response?.data?.error || "Failed to load admin dashboard.",
-        );
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchOverview();
+  const fetchOverview = useCallback(async () => {
+    try {
+      const response = await axios.get(`${API_URL}/admin/overview`, authConfig);
+      setOverview(response.data.overview);
+      setError("");
+    } catch (err) {
+      setError(err.response?.data?.error || "Failed to load admin dashboard.");
+    } finally {
+      setLoading(false);
+    }
   }, [token]);
+
+  useEffect(() => {
+    fetchOverview();
+  }, [fetchOverview]);
 
   // FETCH USERS
   const fetchUsers = useCallback(async () => {
@@ -120,7 +125,6 @@ const AdminDashboard = () => {
       });
 
       setUsers(response.data.users || []);
-
       setTotalUsers(
         response.data.pagination?.totalUsers ??
           response.data.pagination?.total ??
@@ -136,10 +140,7 @@ const AdminDashboard = () => {
   useEffect(() => {
     if (activeTab !== 1) return;
 
-    const timeout = setTimeout(() => {
-      fetchUsers();
-    }, 350);
-
+    const timeout = setTimeout(fetchUsers, 350);
     return () => clearTimeout(timeout);
   }, [activeTab, fetchUsers]);
 
@@ -159,7 +160,6 @@ const AdminDashboard = () => {
       });
 
       setReports(response.data.reports || []);
-
       setTotalReports(
         response.data.pagination?.totalReports ??
           response.data.pagination?.total ??
@@ -174,9 +174,35 @@ const AdminDashboard = () => {
 
   useEffect(() => {
     if (activeTab !== 2) return;
-
     fetchReports();
   }, [activeTab, fetchReports]);
+
+  // FETCH APPEALS
+  const fetchAppeals = useCallback(async () => {
+    setAppealsLoading(true);
+    setAppealsError("");
+
+    try {
+      const response = await axios.get(`${API_URL}/admin/appeals`, {
+        ...authConfig,
+        params: {
+          status: appealStatus,
+        },
+      });
+
+      // The backend returns the appeals array directly.
+      setAppeals(Array.isArray(response.data) ? response.data : []);
+    } catch (err) {
+      setAppealsError(err.response?.data?.error || "Failed to load appeals.");
+    } finally {
+      setAppealsLoading(false);
+    }
+  }, [token, appealStatus]);
+
+  useEffect(() => {
+    if (activeTab !== 3) return;
+    fetchAppeals();
+  }, [activeTab, fetchAppeals]);
 
   // OPEN BAN DIALOG
   const openBanDialog = (user) => {
@@ -208,6 +234,7 @@ const AdminDashboard = () => {
       setBanReason("");
 
       await fetchUsers();
+      await fetchOverview();
     } catch (err) {
       setActionError(err.response?.data?.error || "Failed to ban user.");
     } finally {
@@ -234,6 +261,7 @@ const AdminDashboard = () => {
       );
 
       await fetchUsers();
+      await fetchOverview();
     } catch (err) {
       setUsersError(err.response?.data?.error || "Failed to unban user.");
     } finally {
@@ -241,7 +269,7 @@ const AdminDashboard = () => {
     }
   };
 
-  // OPEN REVIEW DIALOG
+  // OPEN REPORT REVIEW DIALOG
   const openReviewDialog = (report) => {
     setSelectedReport(report);
     setReviewStatus("reviewed");
@@ -278,13 +306,7 @@ const AdminDashboard = () => {
       setSelectedReport(null);
 
       await fetchReports();
-
-      const overviewResponse = await axios.get(
-        `${API_URL}/admin/overview`,
-        authConfig,
-      );
-
-      setOverview(overviewResponse.data.overview);
+      await fetchOverview();
     } catch (err) {
       setReviewError(err.response?.data?.error || "Failed to review report.");
     } finally {
@@ -332,13 +354,7 @@ const AdminDashboard = () => {
       setSelectedReport(null);
 
       await fetchReports();
-
-      const overviewResponse = await axios.get(
-        `${API_URL}/admin/overview`,
-        authConfig,
-      );
-
-      setOverview(overviewResponse.data.overview);
+      await fetchOverview();
     } catch (err) {
       setModerationError(
         err.response?.data?.error || "Failed to execute moderation action.",
@@ -348,10 +364,53 @@ const AdminDashboard = () => {
     }
   };
 
-  // SELECT MODERATION ACTION
   const selectModerationAction = (action) => {
     setModerationAction(action);
     setModerationError("");
+  };
+
+  // OPEN APPEAL DIALOG
+  const openAppealDialog = (appeal) => {
+    setSelectedAppeal(appeal);
+    setAppealDecision("accepted");
+    setAppealResponse("");
+    setAppealActionError("");
+    setAppealDialogOpen(true);
+  };
+
+  // REVIEW APPEAL
+  const handleReviewAppeal = async () => {
+    if (!selectedAppeal) return;
+
+    if (!appealResponse.trim()) {
+      setAppealActionError("Please provide an admin response.");
+      return;
+    }
+
+    setAppealActionLoading(true);
+    setAppealActionError("");
+
+    try {
+      await axios.patch(
+        `${API_URL}/admin/appeals/${selectedAppeal.id}/review`,
+        {
+          status: appealDecision,
+          adminResponse: appealResponse.trim(),
+        },
+        authConfig,
+      );
+
+      setAppealDialogOpen(false);
+      setSelectedAppeal(null);
+
+      await fetchAppeals();
+    } catch (err) {
+      setAppealActionError(
+        err.response?.data?.error || "Failed to review appeal.",
+      );
+    } finally {
+      setAppealActionLoading(false);
+    }
   };
 
   if (loading) {
@@ -377,7 +436,7 @@ const AdminDashboard = () => {
       </Typography>
 
       <Typography color="text.secondary" sx={{ mb: 4 }}>
-        Manage users, reports, and community moderation.
+        Manage users, reports, appeals, and community moderation.
       </Typography>
 
       <Tabs
@@ -390,6 +449,7 @@ const AdminDashboard = () => {
         <Tab label="Overview" />
         <Tab label="Users" />
         <Tab label="Reports" />
+        <Tab label="Appeals" />
       </Tabs>
 
       {/* OVERVIEW */}
@@ -411,8 +471,14 @@ const AdminDashboard = () => {
             }}
           >
             {[
-              { label: "Total Users", value: overview?.totalUsers ?? 0 },
-              { label: "Total Posts", value: overview?.totalPosts ?? 0 },
+              {
+                label: "Total Users",
+                value: overview?.totalUsers ?? 0,
+              },
+              {
+                label: "Total Posts",
+                value: overview?.totalPosts ?? 0,
+              },
               {
                 label: "Total Comments",
                 value: overview?.totalComments ?? 0,
@@ -731,6 +797,135 @@ const AdminDashboard = () => {
         </Box>
       )}
 
+      {/* APPEALS */}
+      {activeTab === 3 && (
+        <Box>
+          <Typography variant="h6" fontWeight="bold" sx={{ mb: 2 }}>
+            Moderation Appeals
+          </Typography>
+
+          <TextField
+            select
+            size="small"
+            label="Filter by status"
+            value={appealStatus}
+            onChange={(event) => setAppealStatus(event.target.value)}
+            sx={{ mb: 3, minWidth: 200 }}
+          >
+            <MenuItem value="pending">Pending</MenuItem>
+            <MenuItem value="accepted">Accepted</MenuItem>
+            <MenuItem value="rejected">Rejected</MenuItem>
+          </TextField>
+
+          {appealsError && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {appealsError}
+            </Alert>
+          )}
+
+          {appealsLoading ? (
+            <Box sx={{ display: "flex", justifyContent: "center", p: 5 }}>
+              <CircularProgress />
+            </Box>
+          ) : (
+            <Paper
+              elevation={0}
+              sx={{
+                border: "1px solid",
+                borderColor: "divider",
+                borderRadius: 3,
+                overflow: "hidden",
+              }}
+            >
+              <TableContainer sx={{ overflowX: "auto" }}>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>User</TableCell>
+                      <TableCell>Original Action</TableCell>
+                      <TableCell>Appeal Explanation</TableCell>
+                      <TableCell>Submitted</TableCell>
+                      <TableCell>Status</TableCell>
+                      <TableCell align="right">Action</TableCell>
+                    </TableRow>
+                  </TableHead>
+
+                  <TableBody>
+                    {appeals.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={6} align="center">
+                          No appeals found.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      appeals.map((appeal) => (
+                        <TableRow key={appeal.id} hover>
+                          <TableCell>
+                            @{appeal.user?.username || "Unknown"}
+                          </TableCell>
+
+                          <TableCell>
+                            <Chip
+                              size="small"
+                              label={
+                                appeal.moderationAction?.action || "Unknown"
+                              }
+                            />
+                          </TableCell>
+
+                          <TableCell>
+                            <Typography
+                              variant="body2"
+                              sx={{
+                                maxWidth: 250,
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                              }}
+                            >
+                              {appeal.explanation}
+                            </Typography>
+                          </TableCell>
+
+                          <TableCell>
+                            {appeal.createdAt
+                              ? new Date(appeal.createdAt).toLocaleDateString()
+                              : "—"}
+                          </TableCell>
+
+                          <TableCell>
+                            <Chip
+                              size="small"
+                              label={appeal.status}
+                              color={
+                                appeal.status === "pending"
+                                  ? "warning"
+                                  : appeal.status === "accepted"
+                                    ? "success"
+                                    : "error"
+                              }
+                            />
+                          </TableCell>
+
+                          <TableCell align="right">
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              onClick={() => openAppealDialog(appeal)}
+                            >
+                              {appeal.status === "pending" ? "Review" : "View"}
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </Paper>
+          )}
+        </Box>
+      )}
+
       {/* BAN USER DIALOG */}
       <Dialog
         open={banDialogOpen}
@@ -870,7 +1065,6 @@ const AdminDashboard = () => {
                 Choose a moderation action
               </Typography>
 
-              {/* ACTION BUTTONS */}
               <Box
                 sx={{
                   display: "flex",
@@ -981,7 +1175,6 @@ const AdminDashboard = () => {
                   : "Execute Moderation Action"}
               </Button>
 
-              {/* REVIEW WITHOUT MODERATION */}
               <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
                 <Typography fontWeight="bold" sx={{ mb: 2 }}>
                   Review without taking action
@@ -1044,6 +1237,148 @@ const AdminDashboard = () => {
           >
             Close
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* APPEAL REVIEW DIALOG */}
+      <Dialog
+        open={appealDialogOpen}
+        onClose={() => {
+          if (!appealActionLoading) {
+            setAppealDialogOpen(false);
+          }
+        }}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle>Appeal #{selectedAppeal?.id}</DialogTitle>
+
+        <DialogContent>
+          {selectedAppeal && (
+            <Box sx={{ mt: 1 }}>
+              <Typography variant="body2" color="text.secondary">
+                Appealing user
+              </Typography>
+
+              <Typography sx={{ mb: 2 }}>
+                @{selectedAppeal.user?.username || "Unknown"}
+              </Typography>
+
+              <Typography variant="body2" color="text.secondary">
+                Original moderation action
+              </Typography>
+
+              <Typography sx={{ mb: 2 }}>
+                {selectedAppeal.moderationAction?.action || "Unknown"}
+              </Typography>
+
+              <Typography variant="body2" color="text.secondary">
+                Original reason
+              </Typography>
+
+              <Typography sx={{ mb: 2 }}>
+                {selectedAppeal.moderationAction?.reason ||
+                  "No reason recorded."}
+              </Typography>
+
+              <Typography variant="body2" color="text.secondary">
+                User's explanation
+              </Typography>
+
+              <Paper variant="outlined" sx={{ p: 2, mt: 1, mb: 3 }}>
+                {selectedAppeal.explanation}
+              </Paper>
+
+              {selectedAppeal.status === "pending" ? (
+                <>
+                  <Typography fontWeight="bold" sx={{ mb: 1 }}>
+                    Your decision
+                  </Typography>
+
+                  <TextField
+                    select
+                    fullWidth
+                    label="Decision"
+                    value={appealDecision}
+                    onChange={(event) => setAppealDecision(event.target.value)}
+                    disabled={appealActionLoading}
+                    sx={{ mb: 2 }}
+                  >
+                    <MenuItem value="accepted">Accept appeal</MenuItem>
+
+                    <MenuItem value="rejected">Reject appeal</MenuItem>
+                  </TextField>
+
+                  <TextField
+                    fullWidth
+                    multiline
+                    minRows={3}
+                    label="Admin response"
+                    placeholder="Explain your decision to the user..."
+                    value={appealResponse}
+                    onChange={(event) => setAppealResponse(event.target.value)}
+                    disabled={appealActionLoading}
+                  />
+
+                  {appealActionError && (
+                    <Alert severity="error" sx={{ mt: 2 }}>
+                      {appealActionError}
+                    </Alert>
+                  )}
+                </>
+              ) : (
+                <>
+                  <Typography variant="body2" color="text.secondary">
+                    Final decision
+                  </Typography>
+
+                  <Chip
+                    label={selectedAppeal.status}
+                    color={
+                      selectedAppeal.status === "accepted" ? "success" : "error"
+                    }
+                    sx={{ my: 1 }}
+                  />
+
+                  <Typography variant="body2" color="text.secondary">
+                    Admin response
+                  </Typography>
+
+                  <Typography sx={{ mt: 1 }}>
+                    {selectedAppeal.adminResponse || "No response recorded."}
+                  </Typography>
+
+                  <Typography variant="caption" color="text.secondary">
+                    Reviewed by {selectedAppeal.reviewer?.username || "Admin"}
+                  </Typography>
+                </>
+              )}
+            </Box>
+          )}
+        </DialogContent>
+
+        <DialogActions sx={{ p: 2 }}>
+          <Button
+            onClick={() => setAppealDialogOpen(false)}
+            disabled={appealActionLoading}
+          >
+            Close
+          </Button>
+
+          {selectedAppeal?.status === "pending" && (
+            <Button
+              variant="contained"
+              color={appealDecision === "accepted" ? "success" : "error"}
+              onClick={handleReviewAppeal}
+              disabled={appealActionLoading || !appealResponse.trim()}
+            >
+              {appealActionLoading
+                ? "Submitting..."
+                : `Confirm ${
+                    appealDecision === "accepted" ? "Acceptance" : "Rejection"
+                  }`}
+            </Button>
+          )}
         </DialogActions>
       </Dialog>
     </Box>
